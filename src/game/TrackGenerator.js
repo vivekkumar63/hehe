@@ -56,15 +56,20 @@ export class TrackGenerator {
     const bodies  = [];
     const floorY  = y + h * 0.7;
 
-    const holePositions = [];
-    for (let i = 0; i < count; i++) {
-      holePositions.push(this.rng.between(WALL_T + 80, CANVAS_W - WALL_T - 80));
-    }
-    holePositions.sort((a, b) => a - b);
-
+    const holes = [];
     let cursor = WALL_T;
-    holePositions.forEach(hx => {
-      const hw = this.rng.between(60, 140);
+    for (let i = 0; i < count; i++) {
+      const hw   = this.rng.between(60, 140);
+      const minX = cursor + 60 + hw / 2;
+      const maxX = CANVAS_W - WALL_T - hw / 2 - 60;
+      if (minX > maxX) break;
+      const hx = this.rng.between(minX, maxX);
+      holes.push({ hx, hw });
+      cursor = hx + hw / 2;
+    }
+
+    cursor = WALL_T;
+    holes.forEach(({ hx, hw }) => {
       if (hx - hw / 2 > cursor + 20) {
         bodies.push(this._platform(cursor, floorY, hx - hw / 2 - cursor, 18));
       }
@@ -136,7 +141,7 @@ export class TrackGenerator {
 
   _module_NarrowPassage(y, h) {
     const cx  = CANVAS_W / 2;
-    const gap = RACER_RADIUS * 2.6;
+    const gap = RACER_RADIUS * 4;
     return {
       bodies: [
         this._platform(WALL_T, y + h * 0.5, cx - gap / 2 - WALL_T, 18),

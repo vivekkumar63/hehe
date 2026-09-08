@@ -179,14 +179,15 @@ export class GameScene extends Phaser.Scene {
   }
 
   _addPlatform(x, y, width, height, angle = 0) {
-    this.matter.add.rectangle(x + width / 2, y, width, height, {
-      isStatic: true, label: 'platform', angle
+    const cx = x + width / 2;
+    const body = this.matter.add.rectangle(cx, y, width, height, {
+      isStatic: true, label: 'platform'
     });
-    const g = this.add.graphics();
-    g.fillStyle(0x2244aa, 1);
-    g.fillRect(x, y - height / 2, width, height);
-    g.fillStyle(0x4488ff, 0.4);
-    g.fillRect(x, y - height / 2, width, 3);
+    if (angle !== 0) this.matter.body.setAngle(body, angle);
+    const rect = this.add.rectangle(cx, y, width, height, 0x2244aa);
+    rect.setAngle(Phaser.Math.RadToDeg(angle));
+    const stripe = this.add.rectangle(cx, y - height / 2 + 1.5, width, 3, 0x4488ff, 0.4);
+    stripe.setAngle(Phaser.Math.RadToDeg(angle));
   }
 
   _addSpinner({ x, y, len, speed }) {
