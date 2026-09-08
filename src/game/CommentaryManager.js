@@ -1,7 +1,6 @@
 import { EventBus } from '../utils/eventBus.js';
 import { COMMENTARY } from '../data/commentary.js';
 
-const PRIORITY = { HIGH: 0, MEDIUM: 1, LOW: 2 };
 const COOLDOWNS = { HIGH: 3000, MEDIUM: 6000, LOW: 12000 };
 
 const EVENT_PRIORITY = {

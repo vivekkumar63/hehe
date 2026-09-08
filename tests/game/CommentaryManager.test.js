@@ -3,10 +3,6 @@ import { EventBus } from '../../src/utils/eventBus.js';
 
 beforeEach(() => EventBus.clear());
 
-vi.mock('../../src/game/CommentaryManager.js', async (importOriginal) => {
-  return importOriginal();
-});
-
 import { CommentaryManager } from '../../src/game/CommentaryManager.js';
 
 describe('CommentaryManager', () => {
