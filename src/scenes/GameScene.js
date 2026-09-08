@@ -4,6 +4,7 @@ import { EventBus } from '../utils/eventBus.js';
 import { COUNTRIES } from '../data/countries.js';
 import { CountryRacer } from '../entities/CountryRacer.js';
 import { createRNG } from '../utils/seededRandom.js';
+import { Hole } from '../entities/Hole.js';
 
 const WALL_T = 20;
 
@@ -16,6 +17,7 @@ export class GameScene extends Phaser.Scene {
     this._drawArenaBackground();
     this.seed  = Math.floor(Math.random() * 0xFFFFFF);
     this._spawnRacers();
+    this._setupCollisions();
   }
 
   _buildArena() {
@@ -36,8 +38,50 @@ export class GameScene extends Phaser.Scene {
     this._addPlatform(CANVAS_W * 0.05, y0 + h * 0.6, CANVAS_W * 0.4,  18);
     this._addPlatform(CANVAS_W * 0.55, y0 + h * 0.6, CANVAS_W * 0.4,  18);
 
-    // Expose holes array for future tasks
+    // Holes
     this.holes = [];
+    this._addHoles();
+  }
+
+  _addHoles() {
+    this.holes.push(new Hole(this, CANVAS_W * 0.3, ZONE_GAME_Y + ZONE_GAME_H * 0.5, 140));
+    this.holes.push(new Hole(this, CANVAS_W * 0.7, ZONE_GAME_Y + ZONE_GAME_H * 0.5, 140));
+  }
+
+  _setupCollisions() {
+    this.matter.world.on('collisionstart', (event) => {
+      event.pairs.forEach(({ bodyA, bodyB }) => {
+        this._checkElimination(bodyA, bodyB);
+        this._checkElimination(bodyB, bodyA);
+      });
+    });
+  }
+
+  _checkElimination(maybeRacer, maybeTrigger) {
+    if (!maybeRacer.label?.startsWith('racer_')) return;
+    if (maybeTrigger.label !== 'hole' && maybeTrigger.label !== 'death_zone') return;
+
+    const racer = this.racers?.find(r => r.body === maybeRacer && r.alive);
+    if (!racer) return;
+
+    racer.eliminate();
+
+    const remaining = this.racers.filter(r => r.alive).length;
+    EventBus.emit('COUNTRY_ELIMINATED', {
+      country: racer.country,
+      remaining,
+      total: this.racers.length
+    });
+
+    if (remaining === 1) {
+      const winner = this.racers.find(r => r.alive);
+      EventBus.emit('WINNER_DECLARED', { country: winner.country });
+    }
+
+    if (remaining === 0) {
+      // Edge case: simultaneous last two eliminated
+      EventBus.emit('RACE_NO_WINNER', {});
+    }
   }
 
   _addPlatform(x, y, width, height) {
