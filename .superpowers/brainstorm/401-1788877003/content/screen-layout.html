@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Screen Layout</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0f1a;
+    color: #e0e0ff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    gap: 16px;
+  }
+  h2 { font-size: 1.3rem; color: #a0aaff; text-align: center; }
+  .subtitle { font-size: 0.85rem; color: #888; text-align: center; margin-bottom: 8px; }
+  .layouts {
+    display: flex;
+    gap: 24px;
+    justify-content: center;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 900px;
+  }
+  .layout-card {
+    cursor: pointer;
+    border: 2px solid #2a2d4a;
+    border-radius: 12px;
+    padding: 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 220px;
+    background: #12152a;
+  }
+  .layout-card:hover { border-color: #5566ff; }
+  .layout-card.selected { border-color: #7788ff; box-shadow: 0 0 20px #4455ff88; }
+  .layout-card h3 { font-size: 0.95rem; color: #c0c8ff; margin-bottom: 4px; text-align: center; }
+  .layout-card p { font-size: 0.75rem; color: #667; text-align: center; margin-bottom: 10px; }
+
+  /* Phone frame */
+  .phone {
+    width: 180px;
+    height: 320px;
+    border: 2px solid #3a3d5a;
+    border-radius: 16px;
+    overflow: hidden;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    background: #08090f;
+  }
+
+  /* Zone styles */
+  .zone {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    overflow: hidden;
+    position: relative;
+  }
+  .zone-header {
+    background: linear-gradient(135deg, #1a1d3a, #2a2050);
+    color: #a0aaff;
+    border-bottom: 1px solid #3a3d6a;
+  }
+  .zone-leaderboard {
+    background: linear-gradient(135deg, #0f1a2a, #1a2a1a);
+    color: #70c870;
+    border-bottom: 1px solid #2a4a2a;
+  }
+  .zone-gameplay {
+    background: linear-gradient(135deg, #12182a, #1a1030);
+    color: #8888ff;
+    flex: 1;
+    border-bottom: 1px solid #3a3a5a;
+  }
+  .zone-event {
+    background: linear-gradient(135deg, #2a1a1a, #3a2010);
+    color: #ff8844;
+    border-bottom: 1px solid #5a3a1a;
+  }
+  .zone-commentary {
+    background: linear-gradient(135deg, #1a1a2a, #0f0f1f);
+    color: #aaaacc;
+    border-bottom: 1px solid #2a2a3a;
+  }
+  .zone-remaining {
+    background: linear-gradient(135deg, #1a1020, #200f30);
+    color: #cc88ff;
+  }
+
+  .zone-label {
+    writing-mode: horizontal-tb;
+    text-align: center;
+    opacity: 0.85;
+  }
+
+  /* option A: compact header, big gameplay */
+  .layout-a .zone-header    { height: 36px; }
+  .layout-a .zone-leaderboard { height: 44px; }
+  .layout-a .zone-gameplay  { } /* flex:1 */
+  .layout-a .zone-event     { height: 22px; }
+  .layout-a .zone-commentary{ height: 30px; }
+  .layout-a .zone-remaining { height: 18px; }
+
+  /* option B: taller header/leaderboard, slightly less gameplay */
+  .layout-b .zone-header    { height: 44px; }
+  .layout-b .zone-leaderboard { height: 56px; }
+  .layout-b .zone-gameplay  { } /* flex:1 */
+  .layout-b .zone-event     { height: 22px; }
+  .layout-b .zone-commentary{ height: 36px; }
+  .layout-b .zone-remaining { height: 22px; }
+
+  /* option C: leaderboard as overlay (hidden during race, shown between) */
+  .layout-c .zone-header    { height: 36px; }
+  .layout-c .zone-leaderboard { height: 20px; background: linear-gradient(135deg, #1a1a2a, #222); color: #555; font-style: italic; }
+  .layout-c .zone-gameplay  { } /* flex:1 */
+  .layout-c .zone-event     { height: 22px; }
+  .layout-c .zone-commentary{ height: 30px; }
+  .layout-c .zone-remaining { height: 20px; }
+
+  .percentage {
+    position: absolute;
+    right: 4px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 0.5rem;
+    opacity: 0.5;
+    color: #fff;
+  }
+
+  .tag {
+    display: inline-block;
+    font-size: 0.65rem;
+    padding: 2px 8px;
+    border-radius: 4px;
+    margin-top: 6px;
+  }
+  .tag-recommended { background: #2a4a2a; color: #70e870; }
+  .tag-compact { background: #2a2a4a; color: #8888ff; }
+  .tag-max { background: #3a2a1a; color: #ff8844; }
+</style>
+</head>
+<body>
+
+<h2>Screen Zone Proportions</h2>
+<p class="subtitle">How much space should each UI zone get in the 9:16 vertical layout?<br>Click to select your preferred option.</p>
+
+<div class="layouts">
+
+  <!-- Option A -->
+  <div class="layout-card" id="opt-a" onclick="select('a')">
+    <h3>A — Balanced</h3>
+    <p>Compact header, visible leaderboard, maximum gameplay</p>
+    <div class="phone layout-a">
+      <div class="zone zone-header"><span class="zone-label">HEADER + LIVE + RACE#</span><span class="percentage">11%</span></div>
+      <div class="zone zone-leaderboard"><span class="zone-label">TOP 3 LEADERBOARD</span><span class="percentage">14%</span></div>
+      <div class="zone zone-gameplay"><span class="zone-label">⚡ GAMEPLAY ⚡</span><span class="percentage">~57%</span></div>
+      <div class="zone zone-event"><span class="zone-label">CURRENT EVENT</span><span class="percentage">7%</span></div>
+      <div class="zone zone-commentary"><span class="zone-label">🎙 COMMENTARY</span><span class="percentage">9%</span></div>
+      <div class="zone zone-remaining"><span class="zone-label">REMAINING 3/12</span><span class="percentage">6%</span></div>
+    </div>
+    <div style="text-align:center"><span class="tag tag-recommended">★ Recommended</span></div>
+  </div>
+
+  <!-- Option B -->
+  <div class="layout-card" id="opt-b" onclick="select('b')">
+    <h3>B — Full Info</h3>
+    <p>Taller header, top-5 leaderboard, slightly less gameplay</p>
+    <div class="phone layout-b">
+      <div class="zone zone-header"><span class="zone-label">HEADER + LIVE + RACE#</span><span class="percentage">14%</span></div>
+      <div class="zone zone-leaderboard"><span class="zone-label">TOP 5 LEADERBOARD</span><span class="percentage">18%</span></div>
+      <div class="zone zone-gameplay"><span class="zone-label">⚡ GAMEPLAY ⚡</span><span class="percentage">~47%</span></div>
+      <div class="zone zone-event"><span class="zone-label">CURRENT EVENT</span><span class="percentage">7%</span></div>
+      <div class="zone zone-commentary"><span class="zone-label">🎙 COMMENTARY</span><span class="percentage">11%</span></div>
+      <div class="zone zone-remaining"><span class="zone-label">REMAINING 3/12</span><span class="percentage">7%</span></div>
+    </div>
+    <div style="text-align:center"><span class="tag tag-compact">Full Data</span></div>
+  </div>
+
+  <!-- Option C -->
+  <div class="layout-card" id="opt-c" onclick="select('c')">
+    <h3>C — Max Gameplay</h3>
+    <p>Leaderboard collapses during race, expands between races</p>
+    <div class="phone layout-c">
+      <div class="zone zone-header"><span class="zone-label">HEADER + LIVE + RACE#</span><span class="percentage">11%</span></div>
+      <div class="zone zone-leaderboard"><span class="zone-label">leaderboard hidden during race</span><span class="percentage">6%</span></div>
+      <div class="zone zone-gameplay"><span class="zone-label">⚡ GAMEPLAY ⚡</span><span class="percentage">~64%</span></div>
+      <div class="zone zone-event"><span class="zone-label">CURRENT EVENT</span><span class="percentage">7%</span></div>
+      <div class="zone zone-commentary"><span class="zone-label">🎙 COMMENTARY</span><span class="percentage">9%</span></div>
+      <div class="zone zone-remaining"><span class="zone-label">REMAINING 3/12</span><span class="percentage">6%</span></div>
+    </div>
+    <div style="text-align:center"><span class="tag tag-max">Max Arena</span></div>
+  </div>
+
+</div>
+
+<script>
+  let selected = null;
+  function select(choice) {
+    if (selected) document.getElementById('opt-' + selected).classList.remove('selected');
+    selected = choice;
+    document.getElementById('opt-' + selected).classList.add('selected');
+    if (window.__brainstorm_select) window.__brainstorm_select(choice, document.getElementById('opt-' + choice).querySelector('h3').textContent);
+  }
+</script>
+</body>
+</html>

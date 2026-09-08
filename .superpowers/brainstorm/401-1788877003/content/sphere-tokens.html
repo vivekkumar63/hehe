@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sphere Tokens</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0f1a;
+    color: #e0e0ff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    gap: 24px;
+  }
+  h2 { font-size: 1.3rem; color: #a0aaff; text-align: center; }
+  .subtitle { font-size: 0.85rem; color: #888; text-align: center; max-width: 520px; }
+
+  .section { text-align: center; }
+  .section h3 { font-size: 0.9rem; color: #7788ff; margin-bottom: 16px; letter-spacing: 0.05em; text-transform: uppercase; }
+
+  .row { display: flex; gap: 28px; justify-content: center; flex-wrap: wrap; }
+  .token-wrap { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+  .token-name { font-size: 0.7rem; font-weight: 700; color: #aaa; letter-spacing: 0.1em; text-transform: uppercase; }
+
+  /* ---- FLAT (old style for comparison) ---- */
+  .flat {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.2);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .flat .stripes { position: absolute; inset: 0; border-radius: 50%; }
+  .flat .emoji { position: relative; z-index: 2; font-size: 28px; }
+
+  /* ---- SPHERE style ---- */
+  .sphere {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    /* soft drop shadow for ground contact */
+    filter: drop-shadow(0 6px 10px rgba(0,0,0,0.7));
+  }
+  /* The flag stripe layer — rotates to simulate rolling */
+  .sphere .stripes {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+  }
+  /* 3D shading: dark bottom hemisphere */
+  .sphere .shade {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 85%, rgba(0,0,0,0.55) 0%, transparent 65%);
+  }
+  /* Specular highlight — upper left */
+  .sphere .highlight {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 28%, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0.08) 35%, transparent 60%);
+  }
+  /* Edge darkening (limb darkening like a real sphere) */
+  .sphere .limb {
+    position: absolute; inset: 0;
+    border-radius: 50%;
+    box-shadow: inset 0 0 18px 6px rgba(0,0,0,0.5);
+  }
+  /* Emoji sits on top of all shading */
+  .sphere .emoji {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px;
+    z-index: 10;
+    filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7));
+  }
+
+  /* Rolling animation */
+  @keyframes roll {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  .sphere.rolling .stripes { animation: roll 1.6s linear infinite; }
+
+  /* Flag colors */
+  /* India: saffron / white / green */
+  .f-india  { background: linear-gradient(to bottom, #FF9933 33.3%, #fff 33.3%, #fff 66.6%, #138808 66.6%); }
+  /* USA: red/white/blue horizontal bands */
+  .f-usa    { background: repeating-linear-gradient(to bottom, #B22234 0, #B22234 12%, #fff 12%, #fff 24%); }
+  .f-usa-bottom { position:absolute; inset: 0; background: linear-gradient(to right, #3C3B6E 0%, #3C3B6E 40%, transparent 40%); opacity: 0.5; border-radius: 50%; }
+  /* Japan: white with red center dot */
+  .f-japan  { background: #fff; }
+  .f-japan::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 28px; height: 28px; background: #BC002D; border-radius: 50%; }
+  /* Germany: black / red / gold */
+  .f-germany { background: linear-gradient(to bottom, #000 33.3%, #DD0000 33.3%, #DD0000 66.6%, #FFCE00 66.6%); }
+  /* France: blue / white / red vertical */
+  .f-france  { background: linear-gradient(to right, #0055A4 33.3%, #fff 33.3%, #fff 66.6%, #EF4135 66.6%); }
+  /* Brazil: green with yellow diamond (simplified) */
+  .f-brazil  { background: #009C3B; }
+  .f-brazil::after { content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 44px; height: 32px; background: #FEDF00; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); }
+  /* UK: navy */
+  .f-uk      { background: #012169; }
+  /* Australia: navy */
+  .f-australia { background: #00008B; }
+
+  .option-area {
+    display: flex; gap: 32px; justify-content: center; align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .opt-box {
+    background: #12152a;
+    border: 2px solid #2a2d4a;
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-width: 200px;
+  }
+  .opt-box:hover { border-color: #5566ff; }
+  .opt-box.selected { border-color: #7788ff; box-shadow: 0 0 20px #4455ff66; }
+  .opt-box h3 { font-size: 0.95rem; color: #c0c8ff; margin-bottom: 4px; }
+  .opt-box p { font-size: 0.72rem; color: #667; margin-bottom: 14px; }
+  .verdict { font-size: 0.72rem; margin-top: 10px; }
+  .verdict.good { color: #6a8; }
+  .verdict.bad { color: #a65; }
+</style>
+</head>
+<body>
+
+<h2>Sphere-Style Racer Tokens</h2>
+<p class="subtitle">Flat circle vs. 3D sphere illusion — the sphere version shows rotation as it rolls. Pick which treatment to use.</p>
+
+<!-- Comparison row -->
+<div class="section">
+  <h3>Side-by-side comparison (spheres are animated)</h3>
+  <div class="row">
+    <div class="token-wrap">
+      <div class="flat"><div class="stripes f-india"></div><div class="emoji">🇮🇳</div></div>
+      <div class="token-name">Flat</div>
+    </div>
+    <div class="token-wrap">
+      <div class="sphere rolling"><div class="stripes f-india"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji">🇮🇳</div></div>
+      <div class="token-name">Sphere</div>
+    </div>
+    <div class="token-wrap">
+      <div class="sphere rolling"><div class="stripes f-usa"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji">🇺🇸</div></div>
+      <div class="token-name">Sphere</div>
+    </div>
+    <div class="token-wrap">
+      <div class="sphere rolling"><div class="stripes f-germany"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji">🇩🇪</div></div>
+      <div class="token-name">Sphere</div>
+    </div>
+    <div class="token-wrap">
+      <div class="sphere rolling"><div class="stripes f-japan"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji">🇯🇵</div></div>
+      <div class="token-name">Sphere</div>
+    </div>
+    <div class="token-wrap">
+      <div class="sphere rolling"><div class="stripes f-france"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji">🇫🇷</div></div>
+      <div class="token-name">Sphere</div>
+    </div>
+    <div class="token-wrap">
+      <div class="sphere rolling"><div class="stripes f-brazil"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji">🇧🇷</div></div>
+      <div class="token-name">Sphere</div>
+    </div>
+  </div>
+</div>
+
+<!-- Options to pick -->
+<div class="option-area">
+  <div class="opt-box" id="opt-a" onclick="pick('a')">
+    <h3>A — Emoji only on flat</h3>
+    <p>Simple circle, flag stripes, emoji centered. Simpler canvas code.</p>
+    <div class="row" style="gap:12px;justify-content:center">
+      <div class="flat" style="width:52px;height:52px"><div class="stripes f-india"></div><div class="emoji" style="font-size:20px">🇮🇳</div></div>
+      <div class="flat" style="width:52px;height:52px"><div class="stripes f-france"></div><div class="emoji" style="font-size:20px">🇫🇷</div></div>
+    </div>
+    <p class="verdict bad">No rolling illusion</p>
+  </div>
+
+  <div class="opt-box" id="opt-b" onclick="pick('b')">
+    <h3>B — 3D Sphere (Recommended)</h3>
+    <p>Flag stripes rotate as ball rolls. Highlight + shadow + limb darkening give sphere depth. Rendered on Phaser canvas texture.</p>
+    <div class="row" style="gap:12px;justify-content:center">
+      <div class="sphere rolling" style="width:52px;height:52px"><div class="stripes f-india"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji" style="font-size:20px">🇮🇳</div></div>
+      <div class="sphere rolling" style="width:52px;height:52px"><div class="stripes f-france"></div><div class="shade"></div><div class="highlight"></div><div class="limb"></div><div class="emoji" style="font-size:20px">🇫🇷</div></div>
+    </div>
+    <p class="verdict good">★ Stripes visibly rotate when rolling</p>
+  </div>
+</div>
+
+<script>
+  let picked = null;
+  function pick(c) {
+    if (picked) document.getElementById('opt-' + picked).classList.remove('selected');
+    picked = c;
+    document.getElementById('opt-' + picked).classList.add('selected');
+    if (window.__brainstorm_select) window.__brainstorm_select(c, document.getElementById('opt-' + c).querySelector('h3').textContent);
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Racer Tokens</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: #0d0f1a;
+    color: #e0e0ff;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    gap: 20px;
+  }
+  h2 { font-size: 1.3rem; color: #a0aaff; text-align: center; }
+  .subtitle { font-size: 0.85rem; color: #888; text-align: center; }
+
+  .options { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; }
+  .option-card {
+    background: #12152a;
+    border: 2px solid #2a2d4a;
+    border-radius: 14px;
+    padding: 20px 16px;
+    width: 240px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    text-align: center;
+  }
+  .option-card:hover { border-color: #5566ff; }
+  .option-card.selected { border-color: #7788ff; box-shadow: 0 0 20px #4455ff88; }
+  .option-card h3 { font-size: 1rem; color: #c0c8ff; margin-bottom: 4px; }
+  .option-card .desc { font-size: 0.75rem; color: #667; margin-bottom: 16px; }
+  .preview { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+
+  /* ---- OPTION A: Emoji + glowing circle ---- */
+  .token-a {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    border: 3px solid rgba(255,255,255,0.3);
+    box-shadow: 0 0 12px rgba(100,150,255,0.6), inset 0 0 8px rgba(0,0,0,0.4);
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.15), rgba(0,0,0,0.3));
+    position: relative;
+  }
+  .token-a .label {
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap;
+    background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 3px;
+  }
+
+  /* ---- OPTION B: Colored flag-stripe circle ---- */
+  .token-b {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    overflow: hidden;
+    border: 3px solid rgba(255,255,255,0.25);
+    box-shadow: 0 0 14px rgba(255,200,50,0.4);
+    position: relative;
+  }
+  .token-b .stripes { width: 100%; height: 100%; border-radius: 50%; overflow: hidden; }
+  .token-b .flag-text {
+    position: absolute; font-size: 22px; text-shadow: 0 1px 3px rgba(0,0,0,0.8);
+  }
+  .token-b .label {
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap;
+    background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 3px;
+  }
+  /* India: orange/white/green */
+  .tb-india .stripes { background: linear-gradient(to bottom, #FF9933 33%, #fff 33%, #fff 66%, #138808 66%); }
+  /* USA: red/white/blue */
+  .tb-usa .stripes { background: linear-gradient(to bottom, #B22234 33%, #FFFFFF 33%, #FFFFFF 66%, #3C3B6E 66%); }
+  /* Japan: white with red dot */
+  .tb-japan .stripes { background: #fff; }
+  .tb-japan::after { content: ''; position: absolute; width: 24px; height: 24px; background: #BC002D; border-radius: 50%; }
+  /* Germany: black/red/gold */
+  .tb-germany .stripes { background: linear-gradient(to bottom, #000 33%, #DD0000 33%, #DD0000 66%, #FFCE00 66%); }
+
+  /* ---- OPTION C: Glassy photo-realistic circle with emoji + ring ---- */
+  .token-c {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    position: relative;
+  }
+  .token-c .ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 3px solid transparent;
+    background-clip: padding-box;
+  }
+  .token-c .bg {
+    position: absolute; inset: 0; border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, rgba(255,255,255,0.25) 0%, rgba(0,0,0,0.5) 100%);
+  }
+  .tc-india  { background: radial-gradient(circle, #FF9933 0%, #138808 100%); }
+  .tc-usa    { background: radial-gradient(circle, #B22234 0%, #3C3B6E 100%); }
+  .tc-japan  { background: radial-gradient(circle, #fff 0%, #ffcccc 100%); }
+  .tc-germany { background: radial-gradient(circle, #FFCE00 0%, #DD0000 100%); }
+  .token-c .emoji { position: relative; z-index: 2; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.6)); }
+  .token-c .pulse {
+    position: absolute; inset: -4px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.5);
+    box-shadow: 0 0 16px rgba(255,200,100,0.6);
+  }
+  .token-c .label {
+    position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+    font-size: 9px; font-weight: 700; color: #fff; white-space: nowrap;
+    background: rgba(0,0,0,0.6); padding: 1px 4px; border-radius: 3px;
+  }
+
+  .pros { font-size: 0.72rem; color: #6a8; margin-top: 6px; text-align: left; padding: 0 4px; }
+  .cons { font-size: 0.72rem; color: #a65; text-align: left; padding: 0 4px; }
+  .pros li, .cons li { margin-left: 12px; margin-top: 2px; }
+
+  .tag {
+    display: inline-block; font-size: 0.65rem; padding: 2px 8px;
+    border-radius: 4px; margin-top: 8px;
+  }
+  .tag-rec { background: #2a4a2a; color: #70e870; }
+  .tag-alt { background: #2a2a4a; color: #8888ff; }
+</style>
+</head>
+<body>
+
+<h2>Country Racer Token Style</h2>
+<p class="subtitle">How should the racing tokens look? All are rendered with canvas/Phaser — no external images required.</p>
+
+<div class="options">
+
+  <!-- Option A: Emoji flags -->
+  <div class="option-card" id="opt-a" onclick="sel('a')">
+    <h3>A — Emoji Flags</h3>
+    <p class="desc">Giant emoji flag centered in a glowing circle</p>
+    <div class="preview">
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-a">🇮🇳<div class="label">INDIA</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-a">🇺🇸<div class="label">USA</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-a">🇯🇵<div class="label">JAPAN</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-a">🇩🇪<div class="label">GER</div></div>
+      </div>
+    </div>
+    <ul class="pros"><li>Instantly recognizable</li><li>Zero assets needed</li><li>Works on all platforms</li></ul>
+    <ul class="cons"><li>Rendering varies by OS</li><li>Less control over look</li></ul>
+    <div><span class="tag tag-rec">★ Recommended</span></div>
+  </div>
+
+  <!-- Option B: Flag stripes -->
+  <div class="option-card" id="opt-b" onclick="sel('b')">
+    <h3>B — Flag Stripe Circles</h3>
+    <p class="desc">Flag colors as circular stripes, emoji overlay</p>
+    <div class="preview">
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-b tb-india"><div class="stripes"></div><div class="flag-text">🇮🇳</div><div class="label">INDIA</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-b tb-usa"><div class="stripes"></div><div class="flag-text">🇺🇸</div><div class="label">USA</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-b tb-japan"><div class="stripes"></div><div class="flag-text">🇯🇵</div><div class="label">JPN</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-b tb-germany"><div class="stripes"></div><div class="flag-text">🇩🇪</div><div class="label">GER</div></div>
+      </div>
+    </div>
+    <ul class="pros"><li>Strong visual identity</li><li>Color-coded at a glance</li><li>Fully canvas-renderable</li></ul>
+    <ul class="cons"><li>Abstract — less literal</li><li>Complex patterns need more code</li></ul>
+    <div><span class="tag tag-alt">Color-coded</span></div>
+  </div>
+
+  <!-- Option C: Glassy glow -->
+  <div class="option-card" id="opt-c" onclick="sel('c')">
+    <h3>C — Glassy Glow</h3>
+    <p class="desc">Country-colored gradient sphere with emoji + pulse ring</p>
+    <div class="preview">
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-c tc-india"><div class="pulse"></div><div class="bg"></div><div class="emoji">🇮🇳</div><div class="label">INDIA</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-c tc-usa"><div class="pulse"></div><div class="bg"></div><div class="emoji">🇺🇸</div><div class="label">USA</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-c tc-japan"><div class="pulse"></div><div class="bg"></div><div class="emoji">🇯🇵</div><div class="label">JPN</div></div>
+      </div>
+      <div style="position:relative;margin-bottom:22px">
+        <div class="token-c tc-germany"><div class="pulse"></div><div class="bg"></div><div class="emoji">🇩🇪</div><div class="label">GER</div></div>
+      </div>
+    </div>
+    <ul class="pros"><li>Most premium/arcade feel</li><li>Distinctive per-country color</li><li>Animated glow in-game</li></ul>
+    <ul class="cons"><li>Most complex to implement</li><li>Country colors must be defined</li></ul>
+    <div><span class="tag tag-alt">Premium</span></div>
+  </div>
+
+</div>
+
+<script>
+  let sel2 = null;
+  function sel(choice) {
+    if (sel2) document.getElementById('opt-' + sel2).classList.remove('selected');
+    sel2 = choice;
+    document.getElementById('opt-' + sel2).classList.add('selected');
+    if (window.__brainstorm_select) window.__brainstorm_select(choice, document.getElementById('opt-' + choice).querySelector('h3').textContent);
+  }
+</script>
+</body>
+</html>

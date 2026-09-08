@@ -29,8 +29,9 @@ export class ScoreManager {
   }
 
   nextRace() {
-    localStorage.setItem(KEYS.race, String(this.getRaceNumber() + 1));
-    return this.getRaceNumber();
+    const next = this.getRaceNumber() + 1;
+    localStorage.setItem(KEYS.race, String(next));
+    return next;
   }
 
   recordWin(countryId) {
