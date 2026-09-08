@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CANVAS_W, CANVAS_H } from './constants.js';
+import { CANVAS_W, CANVAS_H, GRAVITY_Y } from './constants.js';
 import { BootScene } from './scenes/BootScene.js';
 import { GameScene } from './scenes/GameScene.js';
 import { UIScene }   from './scenes/UIScene.js';
@@ -12,7 +12,7 @@ new Phaser.Game({
   parent: 'game-container',
   physics: {
     default: 'matter',
-    matter: { gravity: { x: 0, y: 2.5 }, debug: false }
+    matter: { gravity: { x: 0, y: GRAVITY_Y }, debug: false }
   },
   scale: {
     mode: Phaser.Scale.FIT,
