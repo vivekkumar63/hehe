@@ -38,10 +38,10 @@ export class GameScene extends Phaser.Scene {
         const winner = this.racers?.find(r => r.country.id === country.id);
         if (winner) {
           this.camManager.focusWinner(winner, this._lastTime ?? this.time.now);
-          const { x, y } = winner.body.position;
           for (let i = 0; i < 5; i++) {
             this.time.delayedCall(i * 250, () => {
-              this.confetti?.emitParticleAt(x, y, 30);
+              const { x: wx, y: wy } = winner.body.position;
+              this.confetti?.emitParticleAt(wx, wy, 30);
             });
           }
         }
@@ -101,11 +101,12 @@ export class GameScene extends Phaser.Scene {
       scale: { start: 1, end: 0 },
       alpha: { start: 1, end: 0 },
       quantity: 0,
-      emitting: false
+      emitting: false,
+      maxParticles: 200
     });
 
     const gc = this.make.graphics({ add: false });
-    gc.fillStyle(0xff0000);
+    gc.fillStyle(0xffffff);
     gc.fillRect(0, 0, 8, 8);
     gc.generateTexture('confetti', 8, 8);
     gc.destroy();
@@ -119,7 +120,8 @@ export class GameScene extends Phaser.Scene {
       gravityY: 200,
       quantity: 0,
       emitting: false,
-      tint: [0xff4444, 0x44ff88, 0x4488ff, 0xffdd00, 0xff88ff]
+      tint: [0xff4444, 0x44ff88, 0x4488ff, 0xffdd00, 0xff88ff],
+      maxParticles: 300
     });
   }
 
