@@ -9,6 +9,7 @@ import { RaceManager } from '../game/RaceManager.js';
 import { CameraManager } from '../game/CameraManager.js';
 import { TrackGenerator } from '../game/TrackGenerator.js';
 import { CommentaryManager } from '../game/CommentaryManager.js';
+import { AudioManager } from '../game/AudioManager.js';
 
 const WALL_T = 20;
 
@@ -22,6 +23,8 @@ export class GameScene extends Phaser.Scene {
       this.commentary = new CommentaryManager(uiScene);
       this.commentary.start();
     });
+    this.audio = new AudioManager(this);
+    this.audio.start();
     this.seed = Math.floor(Math.random() * 0xFFFFFF);
     this._buildArena(this.seed);
     this._spawnRacers(this._currentSpawnY ?? ZONE_GAME_Y + 80);
@@ -58,6 +61,7 @@ export class GameScene extends Phaser.Scene {
       }),
       EventBus.on('RACE_RESTART', () => {
         this._raceUnsubs?.forEach(u => u());
+        this.audio?.stop();
         this.matter.world.timeScale = 1;
         this.scene.restart();
       })
