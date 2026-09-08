@@ -6,6 +6,7 @@ import { CountryRacer } from '../entities/CountryRacer.js';
 import { createRNG } from '../utils/seededRandom.js';
 import { Hole } from '../entities/Hole.js';
 import { RaceManager } from '../game/RaceManager.js';
+import { CameraManager } from '../game/CameraManager.js';
 
 const WALL_T = 20;
 
@@ -25,6 +26,7 @@ export class GameScene extends Phaser.Scene {
 
     // Race lifecycle
     this.raceManager = new RaceManager(this);
+    this.camManager = new CameraManager(this);
 
     this._raceUnsubs = [
       EventBus.on('RACE_STARTED', () => {
@@ -32,6 +34,8 @@ export class GameScene extends Phaser.Scene {
       }),
       EventBus.on('WINNER_CELEBRATED', ({ country }) => {
         this.matter.world.timeScale = 0.3;
+        const winner = this.racers?.find(r => r.country.id === country.id);
+        if (winner) this.camManager.focusWinner(winner);
       }),
       EventBus.on('RACE_RESTART', () => {
         this._raceUnsubs?.forEach(u => u());
@@ -157,5 +161,8 @@ export class GameScene extends Phaser.Scene {
 
   update(time, delta) {
     this.racers?.forEach(r => r.update());
+    if (this.raceManager?.isPhysicsActive()) {
+      this.camManager?.update(this.racers, time);
+    }
   }
 }
