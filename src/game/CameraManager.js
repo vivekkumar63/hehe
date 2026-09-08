@@ -12,7 +12,7 @@ export class CameraManager {
     this._lockUntil  = 0;
 
     // Keep camera centered in game zone by default
-    this.cam.setBounds(0, 0, CANVAS_W, CANVAS_H);
+    this.cam.setBounds(0, ZONE_GAME_Y, CANVAS_W, ZONE_GAME_H);
     this._setOverview();
   }
 
@@ -32,7 +32,9 @@ export class CameraManager {
     const cluster = this._findCluster(alive);
     if (cluster)                 { this._setAction(cluster, time); return; }
 
-    this._setOverview();
+    this._switchMode(MODES.OVERVIEW, time);
+    this.cam.pan(CANVAS_W / 2, CANVAS_H / 2, 600, 'Sine.easeInOut');
+    this.cam.zoomTo(1, 600, 'Sine.easeInOut');
   }
 
   _findNearHole(alive) {
