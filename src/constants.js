@@ -9,6 +9,8 @@ export const ZONE_GAME_H      = Math.round(CANVAS_H * 0.57);  // 1094
 export const ZONE_COMMENT_H   = Math.round(CANVAS_H * 0.09);  // 173
 export const ZONE_REMAIN_H    = Math.round(CANVAS_H * 0.06);  // 115
 
+export const ZONE_COMMENT_Y  = ZONE_GAME_Y + ZONE_GAME_H;
+export const ZONE_REMAIN_Y   = ZONE_COMMENT_Y + ZONE_COMMENT_H;
 export const ZONE_BOTTOM_PAD = CANVAS_H - ZONE_HEADER_H - ZONE_BOARD_H - ZONE_GAME_H - ZONE_COMMENT_H - ZONE_REMAIN_H;
 
 export const RACER_RADIUS = 44;

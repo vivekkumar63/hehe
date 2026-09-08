@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CANVAS_W, CANVAS_H, ZONE_HEADER_H, ZONE_BOARD_H, ZONE_GAME_Y, ZONE_GAME_H } from '../constants.js';
+import { CANVAS_W, CANVAS_H, ZONE_HEADER_H, ZONE_BOARD_H, ZONE_GAME_Y, ZONE_GAME_H, ZONE_COMMENT_Y } from '../constants.js';
 import { EventBus } from '../utils/eventBus.js';
 
 export class UIScene extends Phaser.Scene {
@@ -60,7 +60,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   _drawCommentaryZone() {
-    const y = CANVAS_H - Math.round(CANVAS_H * 0.15);
+    const y = ZONE_COMMENT_Y;
     const g = this.add.graphics();
     g.fillGradientStyle(0x08080f, 0x08080f, 0x0f0f1a, 0x0f0f1a, 1);
     g.fillRect(0, y, CANVAS_W, CANVAS_H - y);
