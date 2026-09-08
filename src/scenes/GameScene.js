@@ -20,6 +20,7 @@ export class GameScene extends Phaser.Scene {
     this.seed  = Math.floor(Math.random() * 0xFFFFFF);
     this._spawnRacers();
     this._setupCollisions();
+    this._initParticles();
 
     // Pause physics until GO
     this.matter.world.enabled = false;
@@ -35,7 +36,15 @@ export class GameScene extends Phaser.Scene {
       EventBus.on('WINNER_CELEBRATED', ({ country }) => {
         this.matter.world.timeScale = 0.3;
         const winner = this.racers?.find(r => r.country.id === country.id);
-        if (winner) this.camManager.focusWinner(winner, this._lastTime ?? this.time.now);
+        if (winner) {
+          this.camManager.focusWinner(winner, this._lastTime ?? this.time.now);
+          const { x, y } = winner.body.position;
+          for (let i = 0; i < 5; i++) {
+            this.time.delayedCall(i * 250, () => {
+              this.confetti?.emitParticleAt(x, y, 30);
+            });
+          }
+        }
       }),
       EventBus.on('COUNTRY_ELIMINATED', ({ country }) => {
         const eliminated = this.racers?.find(r => r.country.id === country.id);
@@ -79,11 +88,53 @@ export class GameScene extends Phaser.Scene {
     this.holes.push(new Hole(this, CANVAS_W * 0.7, ZONE_GAME_Y + ZONE_GAME_H * 0.5, 140));
   }
 
+  _initParticles() {
+    const g = this.make.graphics({ add: false });
+    g.fillStyle(0xffffff);
+    g.fillRect(0, 0, 4, 4);
+    g.generateTexture('spark', 4, 4);
+    g.destroy();
+
+    this.sparks = this.add.particles(0, 0, 'spark', {
+      speed: { min: 80, max: 240 },
+      lifespan: { min: 180, max: 380 },
+      scale: { start: 1, end: 0 },
+      alpha: { start: 1, end: 0 },
+      quantity: 0,
+      emitting: false
+    });
+
+    const gc = this.make.graphics({ add: false });
+    gc.fillStyle(0xff0000);
+    gc.fillRect(0, 0, 8, 8);
+    gc.generateTexture('confetti', 8, 8);
+    gc.destroy();
+
+    this.confetti = this.add.particles(0, 0, 'confetti', {
+      speed: { min: 100, max: 400 },
+      lifespan: { min: 1000, max: 2500 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 1, end: 0 },
+      rotate: { min: 0, max: 360 },
+      gravityY: 200,
+      quantity: 0,
+      emitting: false,
+      tint: [0xff4444, 0x44ff88, 0x4488ff, 0xffdd00, 0xff88ff]
+    });
+  }
+
   _setupCollisions() {
     this.matter.world.on('collisionstart', (event) => {
       event.pairs.forEach(({ bodyA, bodyB }) => {
         this._checkElimination(bodyA, bodyB);
         this._checkElimination(bodyB, bodyA);
+        const isRacerA = bodyA.label?.startsWith('racer_');
+        const isRacerB = bodyB.label?.startsWith('racer_');
+        if (isRacerA && isRacerB) {
+          const mx = (bodyA.position.x + bodyB.position.x) / 2;
+          const my = (bodyA.position.y + bodyB.position.y) / 2;
+          this.sparks?.emitParticleAt(mx, my, 12);
+        }
       });
     });
   }
