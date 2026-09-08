@@ -2,6 +2,7 @@ import { EventBus } from '../utils/eventBus.js';
 import { ScoreManager } from './ScoreManager.js';
 
 const STATES = { PREP: 'PREP', COUNTDOWN: 'COUNTDOWN', RACING: 'RACING', WINNER: 'WINNER', INTERMISSION: 'INTERMISSION' };
+const RACE_DURATION_S = 10 * 60; // 10 minutes
 
 export class RaceManager {
   constructor(scene) {
@@ -17,6 +18,9 @@ export class RaceManager {
       EventBus.on('WINNER_DECLARED',    d => this._onWinner(d)),
       EventBus.on('RACE_NO_WINNER', () => {
         if (this.state !== STATES.RACING) return;
+        this._raceTimer?.remove();
+        this._raceTimer = null;
+        this._stopTick();
         this._beginIntermission();
       })
     );
@@ -49,6 +53,37 @@ export class RaceManager {
   _beginRacing() {
     this.state = STATES.RACING;
     EventBus.emit('RACE_STARTED', { raceNumber: this.raceNumber });
+
+    // Countdown ticker — emits every second so UIScene can display remaining time
+    this._timerRemaining = RACE_DURATION_S;
+    EventBus.emit('RACE_TIMER', { remaining: this._timerRemaining });
+    this._tickEvent = this.scene.time.addEvent({
+      delay: 1000,
+      repeat: RACE_DURATION_S - 1,
+      callback: () => {
+        this._timerRemaining = Math.max(0, this._timerRemaining - 1);
+        EventBus.emit('RACE_TIMER', { remaining: this._timerRemaining });
+      }
+    });
+
+    // Safety fallback: furthest ball wins if nobody finishes in time
+    this._raceTimer = this.scene.time.delayedCall(RACE_DURATION_S * 1000, () => this._onTimeUp());
+  }
+
+  _stopTick() {
+    this._tickEvent?.remove();
+    this._tickEvent = null;
+  }
+
+  _onTimeUp() {
+    if (this.state !== STATES.RACING) return;
+    this._stopTick();
+    const alive = this.scene.racers?.filter(r => r.alive) ?? [];
+    if (alive.length === 0) { this._beginIntermission(); return; }
+    const winner = alive.reduce((best, r) =>
+      r.body.position.y > best.body.position.y ? r : best
+    );
+    EventBus.emit('WINNER_DECLARED', { country: winner.country });
   }
 
   _onEliminated({ remaining }) {
@@ -60,9 +95,11 @@ export class RaceManager {
 
   _onWinner({ country }) {
     if (this.state !== STATES.RACING) return;
+    this._raceTimer?.remove();
+    this._raceTimer = null;
+    this._stopTick();
     this.state = STATES.WINNER;
     this.scores.recordWin(country.id);
-    this.scores.nextRace();
     EventBus.emit('WINNER_CELEBRATED', {
       country,
       raceNumber: this.raceNumber,
@@ -72,7 +109,12 @@ export class RaceManager {
   }
 
   _beginIntermission() {
+    this._raceTimer?.remove();
+    this._raceTimer = null;
+    this._stopTick();
     this.state = STATES.INTERMISSION;
+    this.scores.nextRace(); // always increment — covers winner, no-winner, and time-up paths
+    EventBus.emit('RACE_TIMER', { remaining: null }); // signal UI to clear timer
     EventBus.emit('INTERMISSION_START', {});
     this.scene.time.delayedCall(4000, () => {
       this._unsubs.forEach(u => u());

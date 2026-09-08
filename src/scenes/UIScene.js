@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { CANVAS_W, CANVAS_H, ZONE_HEADER_H, ZONE_BOARD_H, ZONE_GAME_Y, ZONE_GAME_H, ZONE_COMMENT_Y } from '../constants.js';
+import { CANVAS_W, CANVAS_H, ZONE_HEADER_H, ZONE_BOARD_H, ZONE_GAME_Y, ZONE_GAME_H, ZONE_COMMENT_Y, TRACK_H, PX_PER_METER } from '../constants.js';
 import { EventBus } from '../utils/eventBus.js';
 import { ScoreManager } from '../game/ScoreManager.js';
 import { COUNTRIES } from '../data/countries.js';
@@ -15,6 +15,9 @@ export class UIScene extends Phaser.Scene {
     this.scores = new ScoreManager();
     this._countriesMap = Object.fromEntries(COUNTRIES.map(c => [c.id, c]));
     this.updateLeaderboard();
+
+    this._buildDistanceHUD();
+    this._buildTimerHUD();
 
     this._debugMode  = new URLSearchParams(location.search).has('debug');
     this._streamMode = new URLSearchParams(location.search).has('stream');
@@ -103,16 +106,61 @@ export class UIScene extends Phaser.Scene {
     }).setOrigin(0.5, 1);
   }
 
+  _buildDistanceHUD() {
+    // Distance-remaining pill — top-right corner of the game zone
+    const x = CANVAS_W - 24;
+    const y = ZONE_GAME_Y + 24;
+
+    const bg = this.add.graphics().setDepth(48);
+    bg.fillStyle(0x000000, 0.55);
+    bg.fillRoundedRect(x - 210, y, 210, 80, 12);
+
+    this.distanceLabelText = this.add.text(x - 14, y + 10, 'TO FINISH', {
+      fontSize: '20px', fontFamily: 'Arial Black, sans-serif', color: '#aaaacc',
+    }).setOrigin(1, 0).setDepth(50);
+
+    this.distanceText = this.add.text(x - 14, y + 34, '4000 m', {
+      fontSize: '38px', fontFamily: 'Arial Black, sans-serif',
+      color: '#ffdd00', stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(1, 0).setDepth(50);
+  }
+
+  _buildTimerHUD() {
+    const x = 24;
+    const y = ZONE_GAME_Y + 24;
+    const bg = this.add.graphics().setDepth(48);
+    bg.fillStyle(0x000000, 0.55);
+    bg.fillRoundedRect(x, y, 210, 80, 12);
+    this.add.text(x + 14, y + 10, 'TIME LEFT', {
+      fontSize: '20px', fontFamily: 'Arial Black, sans-serif', color: '#aaaacc',
+    }).setOrigin(0, 0).setDepth(50);
+    this.timerText = this.add.text(x + 14, y + 34, '10:00', {
+      fontSize: '38px', fontFamily: 'Arial Black, sans-serif',
+      color: '#ff8800', stroke: '#000000', strokeThickness: 4,
+    }).setOrigin(0, 0).setDepth(50);
+  }
+
   _setupEventListeners() {
     return [
       EventBus.on('COUNTDOWN',          ({ value })   => this._showCountdown(value)),
       EventBus.on('RACE_PREP',          ({ raceNumber }) => { this.setRaceNumber(raceNumber); this.updateLeaderboard(); }),
+      EventBus.on('RACE_TIMER', ({ remaining }) => {
+        if (!this.timerText) return;
+        if (remaining === null) { this.timerText.setText('--:--'); return; }
+        const m = Math.floor(remaining / 60);
+        const s = remaining % 60;
+        this.timerText.setText(`${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+        this.timerText.setColor(remaining <= 60 ? '#ff2200' : '#ff8800');
+      }),
       EventBus.on('COUNTRY_ELIMINATED', ({ country, remaining, total }) => {
         this.setRemaining(remaining, total);
         this.showEliminationCard(country);
       }),
       EventBus.on('WINNER_CELEBRATED',  ({ country }) => { this._showWinner(country); this.updateLeaderboard(); }),
       EventBus.on('FINAL_N',            ({ n })       => this._showFinalN(n)),
+      EventBus.on('RACE_PROGRESS', ({ metersLeft }) => {
+        if (this.distanceText) this.distanceText.setText(`${metersLeft} m`);
+      }),
       EventBus.on('CHAOS_EVENT',  ({ label }) => this._showChaosEvent(label)),
       EventBus.on('DARKNESS_ON',  () => this._setDarkness(true)),
       EventBus.on('DARKNESS_OFF', () => this._setDarkness(false)),

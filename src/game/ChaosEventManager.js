@@ -6,7 +6,6 @@ const EVENTS = [
   { id: 'GRAVITY_FLIP', label: '🌀 GRAVITY FLIP!',   duration: 4000 },
   { id: 'TURBO',        label: '🚀 TURBO BOOST!',     duration: 3000 },
   { id: 'EARTHQUAKE',   label: '🌋 EARTHQUAKE!',       duration: 3500 },
-  { id: 'DARKNESS',     label: '🌑 LIGHTS OUT!',       duration: 3000 }
 ];
 
 export class ChaosEventManager {
@@ -72,9 +71,6 @@ export class ChaosEventManager {
           });
         }});
         break;
-      case 'DARKNESS':
-        EventBus.emit('DARKNESS_ON', {});
-        break;
     }
   }
 
@@ -82,9 +78,6 @@ export class ChaosEventManager {
     switch (id) {
       case 'GRAVITY_FLIP':
         this.scene.matter.world.setGravity(0, GRAVITY_Y);
-        break;
-      case 'DARKNESS':
-        EventBus.emit('DARKNESS_OFF', {});
         break;
     }
   }

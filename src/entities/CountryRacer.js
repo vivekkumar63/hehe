@@ -10,9 +10,9 @@ export class CountryRacer {
 
     // Matter.js physics body
     this.body = scene.matter.add.circle(x, y, RACER_RADIUS, {
-      restitution: 0.4 * physicsVariation,
-      friction:    0.05,
-      frictionAir: 0.008,
+      restitution: 0.5 * physicsVariation,  // elastic bounce
+      friction:    0,                        // zero friction — nothing to grip onto
+      frictionAir: 0.139,                   // air drag → terminal velocity ~18 px/frame (~60 m/s)
       density:     0.002 * physicsVariation,
       label:       `racer_${country.id}`,
       collisionFilter: { category: 0x0001, mask: 0xFFFF }
@@ -33,7 +33,7 @@ export class CountryRacer {
 
     // Country name label below the ball
     this.label = scene.add.text(x, y + RACER_RADIUS + 14, country.name, {
-      fontSize: '22px', fontFamily: 'Arial Black, sans-serif',
+      fontSize: '20px', fontFamily: 'Arial Black, sans-serif',
       color: '#ffffff', stroke: '#000000', strokeThickness: 3
     }).setOrigin(0.5, 0).setDepth(12);
 
