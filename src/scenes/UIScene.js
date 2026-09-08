@@ -11,7 +11,7 @@ export class UIScene extends Phaser.Scene {
     this._drawHeader();
     this._drawLeaderboardZone();
     this._drawCommentaryZone();
-    this._setupEventListeners();
+    this._unsubs = this._setupEventListeners();
     this.scores = new ScoreManager();
     this._countriesMap = Object.fromEntries(COUNTRIES.map(c => [c.id, c]));
     this.updateLeaderboard();
@@ -87,20 +87,21 @@ export class UIScene extends Phaser.Scene {
   }
 
   _setupEventListeners() {
-    EventBus.on('COUNTDOWN',         ({ value })   => this._showCountdown(value));
-    EventBus.on('RACE_PREP',         ({ raceNumber }) => {
-      this.setRaceNumber(raceNumber);
-      this.updateLeaderboard();
-    });
-    EventBus.on('COUNTRY_ELIMINATED',({ country, remaining, total }) => {
-      this.setRemaining(remaining, total);
-      this.showEliminationCard(country);
-    });
-    EventBus.on('WINNER_CELEBRATED', ({ country }) => {
-      this._showWinner(country);
-      this.updateLeaderboard();
-    });
-    EventBus.on('FINAL_N',           ({ n })        => this._showFinalN(n));
+    return [
+      EventBus.on('COUNTDOWN',          ({ value })   => this._showCountdown(value)),
+      EventBus.on('RACE_PREP',          ({ raceNumber }) => { this.setRaceNumber(raceNumber); this.updateLeaderboard(); }),
+      EventBus.on('COUNTRY_ELIMINATED', ({ country, remaining, total }) => {
+        this.setRemaining(remaining, total);
+        this.showEliminationCard(country);
+      }),
+      EventBus.on('WINNER_CELEBRATED',  ({ country }) => { this._showWinner(country); this.updateLeaderboard(); }),
+      EventBus.on('FINAL_N',            ({ n })       => this._showFinalN(n)),
+    ];
+  }
+
+  shutdown() {
+    this._unsubs?.forEach(u => u());
+    this._unsubs = [];
   }
 
   _showCountdown(value) {
@@ -141,10 +142,10 @@ export class UIScene extends Phaser.Scene {
         shadow: { color: colors[n] ?? '#ff4400', blur: 30, fill: true }
       }).setOrigin(0.5).setDepth(90).setAlpha(0);
 
-    this.tweens.chain({ targets: txt, tweens: [
-      { alpha: 1, scaleX: 1.2, scaleY: 1.2, duration: 300, ease: 'Back.out' },
-      { alpha: 1, duration: 1500 },
-      { alpha: 0, duration: 400, onComplete: () => txt.destroy() }
+    this.tweens.chain({ tweens: [
+      { targets: txt, alpha: 1, scaleX: 1.2, scaleY: 1.2, duration: 300, ease: 'Back.out' },
+      { targets: txt, alpha: 1, duration: 1500 },
+      { targets: txt, alpha: 0, duration: 400, onComplete: () => txt.destroy() }
     ]});
   }
 
@@ -197,6 +198,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   showEliminationCard(country) {
+    this._elimCardTween?.stop();
+    this._elimCardTargets?.forEach(t => { try { t.destroy(); } catch {} });
+    this._elimCardTargets = null;
+    this._elimCardTween   = null;
+
     const cx = CANVAS_W / 2;
     const cy = ZONE_GAME_Y + ZONE_GAME_H * 0.2;
 
@@ -217,10 +223,15 @@ export class UIScene extends Phaser.Scene {
     const targets = [bg, label, name];
     targets.forEach(t => t.setAlpha(0));
 
-    this.tweens.chain({ targets, tweens: [
-      { alpha: 1, duration: 200 },
-      { alpha: 1, duration: 1800 },
-      { alpha: 0, duration: 300, onComplete: () => targets.forEach(t => t.destroy()) }
+    this._elimCardTargets = targets;
+    this._elimCardTween   = this.tweens.chain({ tweens: [
+      { targets, alpha: 1, duration: 200 },
+      { targets, alpha: 1, duration: 1800 },
+      { targets, alpha: 0, duration: 300, onComplete: () => {
+        targets.forEach(t => t.destroy());
+        this._elimCardTargets = null;
+        this._elimCardTween   = null;
+      }}
     ]});
   }
 }
