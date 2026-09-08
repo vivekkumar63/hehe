@@ -17,17 +17,25 @@ export class ChaosEventManager {
   }
 
   start() {
+    this._active = true;
     this._scheduleNext();
   }
 
   stop() {
+    this._active = false;
     this._timer?.remove();
     this._timer = null;
+    this._earthquakeTimer?.remove();
+    this._earthquakeTimer = null;
+    // Ensure gravity is always restored on stop
+    this.scene.matter?.world?.setGravity(0, 2.5);
   }
 
   _scheduleNext() {
+    if (!this._active) return;
     const delay = this.rng.between(45000, 90000);
     this._timer = this.scene.time.delayedCall(delay, () => {
+      if (!this._active) return;
       if (this.scene.raceManager?.isPhysicsActive()) this._trigger();
       this._scheduleNext();
     });
@@ -37,7 +45,9 @@ export class ChaosEventManager {
     const ev = this.rng.pick(EVENTS);
     EventBus.emit('CHAOS_EVENT', { id: ev.id, label: ev.label, duration: ev.duration });
     this._applyEffect(ev);
-    this.scene.time.delayedCall(ev.duration, () => this._removeEffect(ev));
+    this.scene.time.delayedCall(ev.duration, () => {
+      if (this._active) this._removeEffect(ev);
+    });
   }
 
   _applyEffect({ id }) {
@@ -52,7 +62,7 @@ export class ChaosEventManager {
         });
         break;
       case 'EARTHQUAKE':
-        this.scene.time.addEvent({ repeat: 8, delay: 200, callback: () => {
+        this._earthquakeTimer = this.scene.time.addEvent({ repeat: 8, delay: 200, callback: () => {
           this.scene.racers?.filter(r => r.alive).forEach(r => {
             m.body.applyForce(r.body, r.body.position, {
               x: (Math.random() - 0.5) * 0.05,
