@@ -1,5 +1,6 @@
 import { EventBus } from '../utils/eventBus.js';
 import { createRNG } from '../utils/seededRandom.js';
+import { GRAVITY_Y } from '../constants.js';
 
 const EVENTS = [
   { id: 'GRAVITY_FLIP', label: '🌀 GRAVITY FLIP!',   duration: 4000 },
@@ -28,7 +29,7 @@ export class ChaosEventManager {
     this._earthquakeTimer?.remove();
     this._earthquakeTimer = null;
     // Ensure gravity is always restored on stop
-    this.scene.matter?.world?.setGravity(0, 2.5);
+    this.scene.matter?.world?.setGravity(0, GRAVITY_Y);
   }
 
   _scheduleNext() {
@@ -54,7 +55,7 @@ export class ChaosEventManager {
     const m = this.scene.matter;
     switch (id) {
       case 'GRAVITY_FLIP':
-        m.world.setGravity(0, -2.5);
+        m.world.setGravity(0, -GRAVITY_Y);
         break;
       case 'TURBO':
         this.scene.racers?.filter(r => r.alive).forEach(r => {
@@ -80,7 +81,7 @@ export class ChaosEventManager {
   _removeEffect({ id }) {
     switch (id) {
       case 'GRAVITY_FLIP':
-        this.scene.matter.world.setGravity(0, 2.5);
+        this.scene.matter.world.setGravity(0, GRAVITY_Y);
         break;
       case 'DARKNESS':
         EventBus.emit('DARKNESS_OFF', {});

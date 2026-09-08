@@ -14,7 +14,11 @@ export class RaceManager {
   start() {
     this._unsubs.push(
       EventBus.on('COUNTRY_ELIMINATED', d => this._onEliminated(d)),
-      EventBus.on('WINNER_DECLARED',    d => this._onWinner(d))
+      EventBus.on('WINNER_DECLARED',    d => this._onWinner(d)),
+      EventBus.on('RACE_NO_WINNER', () => {
+        if (this.state !== STATES.RACING) return;
+        this._beginIntermission();
+      })
     );
     this._beginPrep();
   }

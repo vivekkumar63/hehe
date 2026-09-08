@@ -54,6 +54,7 @@ export class GameScene extends Phaser.Scene {
           this.camManager.focusWinner(winner, this._lastTime ?? this.time.now);
           for (let i = 0; i < 5; i++) {
             this.time.delayedCall(i * 250, () => {
+              if (!winner?.body) return;
               const { x: wx, y: wy } = winner.body.position;
               this.confetti?.emitParticleAt(wx, wy, 30);
             });
@@ -159,6 +160,7 @@ export class GameScene extends Phaser.Scene {
           const mx = (bodyA.position.x + bodyB.position.x) / 2;
           const my = (bodyA.position.y + bodyB.position.y) / 2;
           this.sparks?.emitParticleAt(mx, my, 12);
+          EventBus.emit('COUNTRY_COLLISION', { a: bodyA.label, b: bodyB.label });
         }
         this._checkBounce(bodyA, bodyB);
         this._checkBounce(bodyB, bodyA);
@@ -201,6 +203,7 @@ export class GameScene extends Phaser.Scene {
       x: maybeRacer.velocity.x,
       y: -(strength / 60)
     });
+    EventBus.emit('COUNTRY_BOUNCED', { country: this.racers?.find(r => r.body === maybeRacer)?.country });
   }
 
   _addPlatform(x, y, width, height, angle = 0) {
@@ -314,6 +317,21 @@ export class GameScene extends Phaser.Scene {
     this.racers?.forEach(r => r.update());
     if (this.raceManager?.isPhysicsActive()) {
       this.camManager?.update(this.racers, time);
+      this._emitNearHoleEvents();
     }
+  }
+
+  _emitNearHoleEvents() {
+    const holes = this.holes ?? [];
+    this.racers?.filter(r => r.alive).forEach(r => {
+      for (const h of holes) {
+        const dx = r.body.position.x - h.body.position.x;
+        const dy = r.body.position.y - h.body.position.y;
+        if (Math.sqrt(dx*dx + dy*dy) < 120) {
+          EventBus.emit('COUNTRY_NEAR_HOLE', { country: r.country, distance: Math.sqrt(dx*dx + dy*dy) });
+          break;
+        }
+      }
+    });
   }
 }
