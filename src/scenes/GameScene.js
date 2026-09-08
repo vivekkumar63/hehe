@@ -5,6 +5,7 @@ import { COUNTRIES } from '../data/countries.js';
 import { CountryRacer } from '../entities/CountryRacer.js';
 import { createRNG } from '../utils/seededRandom.js';
 import { Hole } from '../entities/Hole.js';
+import { RaceManager } from '../game/RaceManager.js';
 
 const WALL_T = 20;
 
@@ -18,6 +19,28 @@ export class GameScene extends Phaser.Scene {
     this.seed  = Math.floor(Math.random() * 0xFFFFFF);
     this._spawnRacers();
     this._setupCollisions();
+
+    // Pause physics until GO
+    this.matter.world.enabled = false;
+
+    // Race lifecycle
+    this.raceManager = new RaceManager(this);
+
+    this._raceUnsubs = [
+      EventBus.on('RACE_STARTED', () => {
+        this.matter.world.enabled = true;
+      }),
+      EventBus.on('WINNER_CELEBRATED', ({ country }) => {
+        this.matter.world.timeScale = 0.3;
+      }),
+      EventBus.on('RACE_RESTART', () => {
+        this._raceUnsubs?.forEach(u => u());
+        this.matter.world.timeScale = 1;
+        this.scene.restart();
+      })
+    ];
+
+    this.raceManager.start();
   }
 
   _buildArena() {

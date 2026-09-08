@@ -82,7 +82,78 @@ export class UIScene extends Phaser.Scene {
   }
 
   _setupEventListeners() {
-    // Listeners wired in later tasks — stub for now
+    EventBus.on('COUNTDOWN',         ({ value })   => this._showCountdown(value));
+    EventBus.on('RACE_PREP',         ({ raceNumber }) => this.setRaceNumber(raceNumber));
+    EventBus.on('COUNTRY_ELIMINATED',({ country, remaining, total }) => {
+      this.setRemaining(remaining, total);
+    });
+    EventBus.on('WINNER_CELEBRATED', ({ country }) => this._showWinner(country));
+    EventBus.on('FINAL_N',           ({ n })        => this._showFinalN(n));
+  }
+
+  _showCountdown(value) {
+    const cx = CANVAS_W / 2;
+    const cy = ZONE_GAME_Y + ZONE_GAME_H / 2;
+    const isGo = value === 'GO!';
+
+    const txt = this.add.text(cx, cy, String(value), {
+      fontSize: isGo ? '180px' : '220px',
+      fontFamily: 'Arial Black, Impact, sans-serif',
+      color: isGo ? '#44ff88' : '#ffffff',
+      stroke: isGo ? '#006622' : '#330066',
+      strokeThickness: 12,
+      shadow: { offsetX: 0, offsetY: 0, color: isGo ? '#00ff44' : '#8844ff', blur: 40, fill: true }
+    }).setOrigin(0.5).setDepth(100).setAlpha(0);
+
+    this.tweens.add({
+      targets: txt, alpha: 1, scaleX: 1.3, scaleY: 1.3,
+      duration: 200, ease: 'Back.out',
+      onComplete: () => {
+        this.tweens.add({
+          targets: txt, alpha: 0, scaleX: 0.8, scaleY: 0.8,
+          duration: 500, delay: isGo ? 300 : 500,
+          onComplete: () => txt.destroy()
+        });
+      }
+    });
+  }
+
+  _showFinalN(n) {
+    const labels = { 5: 'FINAL FIVE!', 3: 'FINAL THREE!', 2: 'FINAL TWO!' };
+    const colors = { 5: '#ffaa00', 3: '#ff6600', 2: '#ff2200' };
+    const txt = this.add.text(CANVAS_W / 2, ZONE_GAME_Y + ZONE_GAME_H * 0.15,
+      labels[n] ?? `FINAL ${n}!`, {
+        fontSize: '96px', fontFamily: 'Arial Black, sans-serif',
+        color: colors[n] ?? '#ff4400',
+        stroke: '#000000', strokeThickness: 8,
+        shadow: { color: colors[n] ?? '#ff4400', blur: 30, fill: true }
+      }).setOrigin(0.5).setDepth(90).setAlpha(0);
+
+    this.tweens.chain({ targets: txt, tweens: [
+      { alpha: 1, scaleX: 1.2, scaleY: 1.2, duration: 300, ease: 'Back.out' },
+      { alpha: 1, duration: 1500 },
+      { alpha: 0, duration: 400, onComplete: () => txt.destroy() }
+    ]});
+  }
+
+  _showWinner(country) {
+    const cx = CANVAS_W / 2;
+    const cy = ZONE_GAME_Y + ZONE_GAME_H * 0.4;
+
+    const overlay = this.add.graphics().setDepth(98);
+    overlay.fillStyle(0x000000, 0.65);
+    overlay.fillRect(0, ZONE_GAME_Y, CANVAS_W, ZONE_GAME_H);
+
+    this.add.text(cx, cy - 80, '🏆  WINNER', {
+      fontSize: '90px', fontFamily: 'Arial Black, sans-serif',
+      color: '#ffdd00', stroke: '#885500', strokeThickness: 8,
+      shadow: { color: '#ffaa00', blur: 40, fill: true }
+    }).setOrigin(0.5).setDepth(99);
+
+    this.add.text(cx, cy + 40, country.emoji + '  ' + country.name, {
+      fontSize: '110px', fontFamily: 'Arial Black, sans-serif',
+      color: '#ffffff', stroke: '#000000', strokeThickness: 6
+    }).setOrigin(0.5).setDepth(99);
   }
 
   setRaceNumber(n) {
