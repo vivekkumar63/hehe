@@ -5,7 +5,7 @@ import { GameScene } from './scenes/GameScene.js';
 import { UIScene }   from './scenes/UIScene.js';
 
 new Phaser.Game({
-  type: Phaser.AUTO,
+  type: Phaser.CANVAS,
   width: CANVAS_W,
   height: CANVAS_H,
   backgroundColor: '#08090f',
