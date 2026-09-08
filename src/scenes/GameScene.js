@@ -10,6 +10,7 @@ import { CameraManager } from '../game/CameraManager.js';
 import { TrackGenerator } from '../game/TrackGenerator.js';
 import { CommentaryManager } from '../game/CommentaryManager.js';
 import { AudioManager } from '../game/AudioManager.js';
+import { ChaosEventManager } from '../game/ChaosEventManager.js';
 
 const WALL_T = 20;
 
@@ -41,6 +42,7 @@ export class GameScene extends Phaser.Scene {
     this._raceUnsubs = [
       EventBus.on('RACE_STARTED', () => {
         this.matter.world.enabled = true;
+        this.chaos.start();
       }),
       EventBus.on('WINNER_CELEBRATED', ({ country }) => {
         this.matter.world.timeScale = 0.3;
@@ -62,12 +64,14 @@ export class GameScene extends Phaser.Scene {
       EventBus.on('RACE_RESTART', () => {
         this._raceUnsubs?.forEach(u => u());
         this.audio?.stop();
+        this.chaos?.stop();
         this.matter.world.timeScale = 1;
         this.scene.restart();
       })
     ];
 
     this.raceManager.start();
+    this.chaos = new ChaosEventManager(this, this.seed);
   }
 
   _buildArena(seed) {

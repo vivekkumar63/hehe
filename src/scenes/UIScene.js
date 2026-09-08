@@ -96,6 +96,9 @@ export class UIScene extends Phaser.Scene {
       }),
       EventBus.on('WINNER_CELEBRATED',  ({ country }) => { this._showWinner(country); this.updateLeaderboard(); }),
       EventBus.on('FINAL_N',            ({ n })       => this._showFinalN(n)),
+      EventBus.on('CHAOS_EVENT',  ({ label }) => this._showChaosEvent(label)),
+      EventBus.on('DARKNESS_ON',  () => this._setDarkness(true)),
+      EventBus.on('DARKNESS_OFF', () => this._setDarkness(false)),
     ];
   }
 
@@ -233,5 +236,32 @@ export class UIScene extends Phaser.Scene {
         this._elimCardTween   = null;
       }}
     ]});
+  }
+
+  _showChaosEvent(label) {
+    const cx = CANVAS_W / 2;
+    const cy = ZONE_GAME_Y + ZONE_GAME_H * 0.1;
+    const txt = this.add.text(cx, cy, label, {
+      fontSize: '88px', fontFamily: 'Arial Black, sans-serif',
+      color: '#ff8800', stroke: '#330000', strokeThickness: 10,
+      shadow: { color: '#ff4400', blur: 40, fill: true }
+    }).setOrigin(0.5).setDepth(92).setAlpha(0);
+
+    this.tweens.chain({ tweens: [
+      { targets: txt, alpha: 1, scaleX: 1.3, scaleY: 1.3, duration: 300, ease: 'Back.out' },
+      { targets: txt, alpha: 1, duration: 1200 },
+      { targets: txt, alpha: 0, duration: 500, onComplete: () => txt.destroy() }
+    ]});
+  }
+
+  _setDarkness(on) {
+    if (on) {
+      this._darknessOverlay = this.add.graphics().setDepth(85);
+      this._darknessOverlay.fillStyle(0x000000, 0.92);
+      this._darknessOverlay.fillRect(0, ZONE_GAME_Y, CANVAS_W, ZONE_GAME_H);
+    } else {
+      this._darknessOverlay?.destroy();
+      this._darknessOverlay = null;
+    }
   }
 }
