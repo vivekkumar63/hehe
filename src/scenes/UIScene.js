@@ -15,6 +15,19 @@ export class UIScene extends Phaser.Scene {
     this.scores = new ScoreManager();
     this._countriesMap = Object.fromEntries(COUNTRIES.map(c => [c.id, c]));
     this.updateLeaderboard();
+
+    this._debugMode  = new URLSearchParams(location.search).has('debug');
+    this._streamMode = new URLSearchParams(location.search).has('stream');
+
+    if (this._debugMode) this._buildDebugOverlay();
+    this.input.keyboard.on('keydown-D', () => {
+      this._debugMode = !this._debugMode;
+      this._debugGroup?.setVisible(this._debugMode);
+      if (this._debugMode && !this.debugFps) this._buildDebugOverlay();
+    });
+    this.input.keyboard.on('keydown-S', () => {
+      this._streamMode = !this._streamMode;
+    });
   }
 
   _drawHeader() {
@@ -262,6 +275,36 @@ export class UIScene extends Phaser.Scene {
     } else {
       this._darknessOverlay?.destroy();
       this._darknessOverlay = null;
+    }
+  }
+
+  _buildDebugOverlay() {
+    const bg = this.add.graphics().setDepth(200);
+    bg.fillStyle(0x000000, 0.75);
+    bg.fillRect(10, ZONE_GAME_Y + ZONE_GAME_H + 10, 320, 140);
+
+    this.debugFps  = this.add.text(20, ZONE_GAME_Y + ZONE_GAME_H + 20, 'FPS: --', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#88ff88'
+    }).setDepth(201);
+    this.debugSeed = this.add.text(20, ZONE_GAME_Y + ZONE_GAME_H + 50, 'SEED: --', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#88ff88'
+    }).setDepth(201);
+    this.debugRace = this.add.text(20, ZONE_GAME_Y + ZONE_GAME_H + 80, 'RACERS: --', {
+      fontSize: '24px', fontFamily: 'monospace', color: '#88ff88'
+    }).setDepth(201);
+
+    this._debugGroup = this.add.group([bg, this.debugFps, this.debugSeed, this.debugRace]);
+  }
+
+  update() {
+    if (this._debugMode && this.debugFps) {
+      this.debugFps.setText(`FPS: ${Math.round(this.game.loop.actualFps)}`);
+      const gs = this.scene.get('GameScene');
+      if (gs) {
+        this.debugSeed?.setText(`SEED: ${gs.seed ?? '—'}`);
+        const alive = gs.racers?.filter(r => r.alive).length ?? '—';
+        this.debugRace?.setText(`RACERS: ${alive}`);
+      }
     }
   }
 }

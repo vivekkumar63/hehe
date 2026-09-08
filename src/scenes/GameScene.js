@@ -19,6 +19,9 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene');
+    if (new URLSearchParams(location.search).has('debug')) {
+      this.matter.world.drawDebug = true;
+    }
     this.time.delayedCall(200, () => {
       const uiScene = this.scene.get('UIScene');
       this.commentary = new CommentaryManager(uiScene);
