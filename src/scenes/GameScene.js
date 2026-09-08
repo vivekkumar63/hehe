@@ -35,7 +35,7 @@ export class GameScene extends Phaser.Scene {
       EventBus.on('WINNER_CELEBRATED', ({ country }) => {
         this.matter.world.timeScale = 0.3;
         const winner = this.racers?.find(r => r.country.id === country.id);
-        if (winner) this.camManager.focusWinner(winner);
+        if (winner) this.camManager.focusWinner(winner, this._lastTime ?? 0);
       }),
       EventBus.on('RACE_RESTART', () => {
         this._raceUnsubs?.forEach(u => u());
@@ -92,6 +92,7 @@ export class GameScene extends Phaser.Scene {
     if (!racer) return;
 
     racer.eliminate();
+    this.camManager?.followEliminated(racer, this._lastTime ?? 0);
 
     const remaining = this.racers.filter(r => r.alive).length;
     EventBus.emit('COUNTRY_ELIMINATED', {
@@ -160,6 +161,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time, delta) {
+    this._lastTime = time;
     this.racers?.forEach(r => r.update());
     if (this.raceManager?.isPhysicsActive()) {
       this.camManager?.update(this.racers, time);

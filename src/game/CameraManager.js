@@ -41,7 +41,7 @@ export class CameraManager {
       for (const h of holes) {
         const hx = h.body.position.x, hy = h.body.position.y;
         const dx = r.body.position.x - hx, dy = r.body.position.y - hy;
-        if (Math.sqrt(dx*dx + dy*dy) < 120) return r;
+        if (Math.sqrt(dx*dx + dy*dy) < 80) return r;
       }
     }
     return null;
@@ -93,12 +93,21 @@ export class CameraManager {
     this._lastSwitch = time;
   }
 
-  focusWinner(racer, lockMs = 5000) {
+  focusWinner(racer, time, lockMs = 5000) {
     this.mode = MODES.WINNER;
-    this._lockUntil = Date.now() + lockMs;
+    this._lockUntil = time + lockMs;
     const { x, y } = racer.body.position;
     this.cam.pan(x, y, 800, 'Sine.easeInOut');
     this.cam.zoomTo(2.0, 1200, 'Sine.easeInOut');
+  }
+
+  followEliminated(racer, time) {
+    this.mode = MODES.ELIMINATION;
+    this._lastSwitch = time;
+    this._lockUntil = time + 1200;
+    const { x, y } = racer.body.position;
+    this.cam.pan(x, y, 300, 'Sine.easeInOut');
+    this.cam.zoomTo(1.3, 300, 'Sine.easeInOut');
   }
 
   reset() {
