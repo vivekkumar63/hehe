@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { CANVAS_W, CANVAS_H, ZONE_HEADER_H, ZONE_BOARD_H, ZONE_GAME_Y, ZONE_GAME_H, ZONE_COMMENT_Y } from '../constants.js';
 import { EventBus } from '../utils/eventBus.js';
+import { ScoreManager } from '../game/ScoreManager.js';
+import { COUNTRIES } from '../data/countries.js';
 
 export class UIScene extends Phaser.Scene {
   constructor() { super({ key: 'UIScene', active: false }); }
@@ -10,6 +12,9 @@ export class UIScene extends Phaser.Scene {
     this._drawLeaderboardZone();
     this._drawCommentaryZone();
     this._setupEventListeners();
+    this.scores = new ScoreManager();
+    this._countriesMap = Object.fromEntries(COUNTRIES.map(c => [c.id, c]));
+    this.updateLeaderboard();
   }
 
   _drawHeader() {
@@ -83,11 +88,18 @@ export class UIScene extends Phaser.Scene {
 
   _setupEventListeners() {
     EventBus.on('COUNTDOWN',         ({ value })   => this._showCountdown(value));
-    EventBus.on('RACE_PREP',         ({ raceNumber }) => this.setRaceNumber(raceNumber));
+    EventBus.on('RACE_PREP',         ({ raceNumber }) => {
+      this.setRaceNumber(raceNumber);
+      this.updateLeaderboard();
+    });
     EventBus.on('COUNTRY_ELIMINATED',({ country, remaining, total }) => {
       this.setRemaining(remaining, total);
+      this.showEliminationCard(country);
     });
-    EventBus.on('WINNER_CELEBRATED', ({ country }) => this._showWinner(country));
+    EventBus.on('WINNER_CELEBRATED', ({ country }) => {
+      this._showWinner(country);
+      this.updateLeaderboard();
+    });
     EventBus.on('FINAL_N',           ({ n })        => this._showFinalN(n));
   }
 
@@ -166,5 +178,49 @@ export class UIScene extends Phaser.Scene {
 
   setRemaining(current, total) {
     if (this.remainText) this.remainText.setText(`REMAINING: ${current} / ${total}`);
+  }
+
+  updateLeaderboard() {
+    const top    = this.scores.getTopToday(3);
+    const medals = ['🥇','🥈','🥉'];
+    this.leaderboardRows?.forEach((row, i) => {
+      const entry = top[i];
+      if (entry) {
+        const c = this._countriesMap[entry.id];
+        row.setText(`${medals[i]}  ${c?.emoji ?? ''} ${c?.name ?? entry.id}   ${entry.wins} WINS`);
+        row.setColor('#ffffff');
+      } else {
+        row.setText(`${medals[i]}  —`);
+        row.setColor('#555577');
+      }
+    });
+  }
+
+  showEliminationCard(country) {
+    const cx = CANVAS_W / 2;
+    const cy = ZONE_GAME_Y + ZONE_GAME_H * 0.2;
+
+    const bg = this.add.graphics().setDepth(95);
+    bg.fillStyle(0x1a0000, 0.92);
+    bg.fillRoundedRect(cx - 260, cy - 50, 520, 120, 16);
+    bg.lineStyle(2, 0xff2200, 0.8);
+    bg.strokeRoundedRect(cx - 260, cy - 50, 520, 120, 16);
+
+    const label = this.add.text(cx, cy - 20, 'ELIMINATED', {
+      fontSize: '32px', fontFamily: 'Arial Black, sans-serif', color: '#ff4400'
+    }).setOrigin(0.5).setDepth(96);
+
+    const name = this.add.text(cx, cy + 30, `${country.emoji}  ${country.name}`, {
+      fontSize: '52px', fontFamily: 'Arial Black, sans-serif', color: '#ffffff'
+    }).setOrigin(0.5).setDepth(96);
+
+    const targets = [bg, label, name];
+    targets.forEach(t => t.setAlpha(0));
+
+    this.tweens.chain({ targets, tweens: [
+      { alpha: 1, duration: 200 },
+      { alpha: 1, duration: 1800 },
+      { alpha: 0, duration: 300, onComplete: () => targets.forEach(t => t.destroy()) }
+    ]});
   }
 }
