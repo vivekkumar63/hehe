@@ -1,6 +1,9 @@
 import Phaser from 'phaser';
-import { CANVAS_W, CANVAS_H, ZONE_GAME_Y, ZONE_GAME_H } from '../constants.js';
+import { CANVAS_W, CANVAS_H, ZONE_GAME_Y, ZONE_GAME_H, RACER_RADIUS } from '../constants.js';
 import { EventBus } from '../utils/eventBus.js';
+import { COUNTRIES } from '../data/countries.js';
+import { CountryRacer } from '../entities/CountryRacer.js';
+import { createRNG } from '../utils/seededRandom.js';
 
 const WALL_T = 20;
 
@@ -11,6 +14,8 @@ export class GameScene extends Phaser.Scene {
     this.scene.launch('UIScene');
     this._buildArena();
     this._drawArenaBackground();
+    this.seed  = Math.floor(Math.random() * 0xFFFFFF);
+    this._spawnRacers();
   }
 
   _buildArena() {
@@ -46,6 +51,21 @@ export class GameScene extends Phaser.Scene {
     g.fillRect(x, y - height / 2, width, 3);
   }
 
+  _spawnRacers(spawnY) {
+    const rng    = createRNG(this.seed);
+    const y      = spawnY ?? ZONE_GAME_Y + 80;
+    this.racers  = [];
+
+    COUNTRIES.forEach((country, i) => {
+      const col   = i % 6;
+      const row   = Math.floor(i / 6);
+      const x     = 120 + col * 140 + rng.between(-20, 20);
+      const spawnAt = y + row * 100 + rng.between(-10, 10);
+      const vary  = rng.between(0.95, 1.05);
+      this.racers.push(new CountryRacer(this, country, x, spawnAt, vary));
+    });
+  }
+
   _drawArenaBackground() {
     const g = this.add.graphics();
     const y0 = ZONE_GAME_Y, h = ZONE_GAME_H, w = CANVAS_W;
@@ -66,5 +86,9 @@ export class GameScene extends Phaser.Scene {
     // Arena border glow
     g.lineStyle(3, 0x2244aa, 0.8);
     g.strokeRect(WALL_T, y0, w - WALL_T * 2, h);
+  }
+
+  update(time, delta) {
+    this.racers?.forEach(r => r.update());
   }
 }
