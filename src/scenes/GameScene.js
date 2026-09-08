@@ -7,6 +7,7 @@ import { createRNG } from '../utils/seededRandom.js';
 import { Hole } from '../entities/Hole.js';
 import { RaceManager } from '../game/RaceManager.js';
 import { CameraManager } from '../game/CameraManager.js';
+import { TrackGenerator } from '../game/TrackGenerator.js';
 
 const WALL_T = 20;
 
@@ -15,10 +16,9 @@ export class GameScene extends Phaser.Scene {
 
   create() {
     this.scene.launch('UIScene');
-    this._buildArena();
-    this._drawArenaBackground();
-    this.seed  = Math.floor(Math.random() * 0xFFFFFF);
-    this._spawnRacers();
+    this.seed = Math.floor(Math.random() * 0xFFFFFF);
+    this._buildArena(this.seed);
+    this._spawnRacers(this._currentSpawnY ?? ZONE_GAME_Y + 80);
     this._setupCollisions();
     this._initParticles();
 
@@ -60,32 +60,30 @@ export class GameScene extends Phaser.Scene {
     this.raceManager.start();
   }
 
-  _buildArena() {
+  _buildArena(seed) {
     const w = CANVAS_W, y0 = ZONE_GAME_Y, h = ZONE_GAME_H;
-
-    // World bounds — only game zone
     this.matter.world.setBounds(0, y0, w, h, WALL_T);
 
-    // Death zone sensor at bottom (off-screen)
-    this.matter.add.rectangle(
-      w / 2, y0 + h + 30, w, 60,
-      { isStatic: true, isSensor: true, label: 'death_zone' }
-    );
+    this.matter.add.rectangle(w / 2, y0 + h + 30, w, 60,
+      { isStatic: true, isSensor: true, label: 'death_zone' });
 
-    // Static floor platforms
-    this._addPlatform(CANVAS_W * 0.1,  y0 + h * 0.3, CANVAS_W * 0.35, 18);
-    this._addPlatform(CANVAS_W * 0.55, y0 + h * 0.3, CANVAS_W * 0.35, 18);
-    this._addPlatform(CANVAS_W * 0.05, y0 + h * 0.6, CANVAS_W * 0.4,  18);
-    this._addPlatform(CANVAS_W * 0.55, y0 + h * 0.6, CANVAS_W * 0.4,  18);
-
-    // Holes
     this.holes = [];
-    this._addHoles();
+    const gen    = new TrackGenerator(seed);
+    const layout = gen.generate();
+    this._currentSpawnY = layout.spawnY;
+
+    layout.bodies.forEach(def => this._spawnDef(def));
+    this._drawArenaBackground();
   }
 
-  _addHoles() {
-    this.holes.push(new Hole(this, CANVAS_W * 0.3, ZONE_GAME_Y + ZONE_GAME_H * 0.5, 140));
-    this.holes.push(new Hole(this, CANVAS_W * 0.7, ZONE_GAME_Y + ZONE_GAME_H * 0.5, 140));
+  _spawnDef(def) {
+    switch (def.type) {
+      case 'platform':   return this._addPlatform(def.x, def.y, def.w, def.h, def.angle ?? 0);
+      case 'hole':       return this.holes.push(new Hole(this, def.x, def.y, def.w));
+      case 'spinner':    return this._addSpinner(def);
+      case 'movingwall': return this._addMovingWall(def);
+      case 'bouncepad':  return this._addBouncePad(def);
+    }
   }
 
   _initParticles() {
@@ -137,6 +135,8 @@ export class GameScene extends Phaser.Scene {
           const my = (bodyA.position.y + bodyB.position.y) / 2;
           this.sparks?.emitParticleAt(mx, my, 12);
         }
+        this._checkBounce(bodyA, bodyB);
+        this._checkBounce(bodyB, bodyA);
       });
     });
   }
@@ -168,15 +168,82 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  _addPlatform(x, y, width, height) {
+  _checkBounce(maybeRacer, maybePad) {
+    if (!maybeRacer.label?.startsWith('racer_')) return;
+    if (maybePad.label !== 'bouncepad') return;
+    const strength = maybePad._strength ?? 1000;
+    this.matter.body.setVelocity(maybeRacer, {
+      x: maybeRacer.velocity.x,
+      y: -(strength / 60)
+    });
+  }
+
+  _addPlatform(x, y, width, height, angle = 0) {
     this.matter.add.rectangle(x + width / 2, y, width, height, {
-      isStatic: true, label: 'platform'
+      isStatic: true, label: 'platform', angle
     });
     const g = this.add.graphics();
     g.fillStyle(0x2244aa, 1);
     g.fillRect(x, y - height / 2, width, height);
     g.fillStyle(0x4488ff, 0.4);
     g.fillRect(x, y - height / 2, width, 3);
+  }
+
+  _addSpinner({ x, y, len, speed }) {
+    const bar = this.matter.add.rectangle(x, y, len, 16, { isStatic: true, label: 'obstacle', angle: 0 });
+    const g   = this.add.graphics().setDepth(7);
+    this.time.addEvent({ loop: true, delay: 16, callback: () => {
+      bar.angle += speed * 0.016;
+      this.matter.body.setAngle(bar, bar.angle);
+      g.clear();
+      g.fillStyle(0x4466aa, 1);
+      const cos = Math.cos(bar.angle), sin = Math.sin(bar.angle);
+      const hl = len / 2;
+      g.fillPoints([
+        { x: x + cos*hl - sin*8, y: y + sin*hl + cos*8 },
+        { x: x + cos*hl + sin*8, y: y + sin*hl - cos*8 },
+        { x: x - cos*hl + sin*8, y: y - sin*hl - cos*8 },
+        { x: x - cos*hl - sin*8, y: y - sin*hl + cos*8 }
+      ], true);
+      g.lineStyle(2, 0x88aaff, 0.8);
+      g.strokePoints([
+        { x: x + cos*hl - sin*8, y: y + sin*hl + cos*8 },
+        { x: x + cos*hl + sin*8, y: y + sin*hl - cos*8 },
+        { x: x - cos*hl + sin*8, y: y - sin*hl - cos*8 },
+        { x: x - cos*hl - sin*8, y: y - sin*hl + cos*8 }
+      ], true);
+    }});
+  }
+
+  _addMovingWall({ x, y, axis, speed, range, w, h }) {
+    const wall = this.matter.add.rectangle(x, y, w, h, { isStatic: true, label: 'obstacle' });
+    const startX = x, startY = y;
+    let t = 0;
+    const g = this.add.graphics().setDepth(7);
+    this.time.addEvent({ loop: true, delay: 16, callback: () => {
+      t += 0.016 * speed;
+      const offset = Math.sin(t) * range / 2;
+      const nx = axis === 'h' ? startX + offset : startX;
+      const ny = axis === 'v' ? startY + offset : startY;
+      this.matter.body.setPosition(wall, { x: nx, y: ny });
+      g.clear();
+      g.fillStyle(0x882244, 1);
+      g.fillRect(nx - w/2, ny - h/2, w, h);
+      g.lineStyle(2, 0xff4488, 0.8);
+      g.strokeRect(nx - w/2, ny - h/2, w, h);
+    }});
+  }
+
+  _addBouncePad({ x, y, w, strength }) {
+    const pad = this.matter.add.rectangle(x, y, w, 12, { isStatic: true, isSensor: true, label: 'bouncepad' });
+    pad._strength = strength;
+    const g = this.add.graphics().setDepth(7);
+    g.fillStyle(0x44ff88, 1);
+    g.fillRect(x - w/2, y - 6, w, 12);
+    g.lineStyle(2, 0x88ffcc, 0.9);
+    g.strokeRect(x - w/2, y - 6, w, 12);
+    g.fillStyle(0xffffff, 0.3);
+    g.fillRect(x - w/2, y - 6, w, 3);
   }
 
   _spawnRacers(spawnY) {
