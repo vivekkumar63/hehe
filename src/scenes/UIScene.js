@@ -22,8 +22,12 @@ export class UIScene extends Phaser.Scene {
     if (this._debugMode) this._buildDebugOverlay();
     this.input.keyboard.on('keydown-D', () => {
       this._debugMode = !this._debugMode;
-      this._debugGroup?.setVisible(this._debugMode);
-      if (this._debugMode && !this.debugFps) this._buildDebugOverlay();
+      if (this._debugMode && !this.debugFps) {
+        this._buildDebugOverlay();
+      } else {
+        [this._debugBg, this.debugFps, this.debugSeed, this.debugRace]
+          .forEach(t => t?.setVisible(this._debugMode));
+      }
     });
     this.input.keyboard.on('keydown-S', () => {
       this._streamMode = !this._streamMode;
@@ -279,9 +283,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   _buildDebugOverlay() {
-    const bg = this.add.graphics().setDepth(200);
-    bg.fillStyle(0x000000, 0.75);
-    bg.fillRect(10, ZONE_GAME_Y + ZONE_GAME_H + 10, 320, 140);
+    this._debugBg = this.add.graphics().setDepth(200);
+    this._debugBg.fillStyle(0x000000, 0.75);
+    this._debugBg.fillRect(10, ZONE_GAME_Y + ZONE_GAME_H + 10, 320, 140);
 
     this.debugFps  = this.add.text(20, ZONE_GAME_Y + ZONE_GAME_H + 20, 'FPS: --', {
       fontSize: '24px', fontFamily: 'monospace', color: '#88ff88'
@@ -293,7 +297,6 @@ export class UIScene extends Phaser.Scene {
       fontSize: '24px', fontFamily: 'monospace', color: '#88ff88'
     }).setDepth(201);
 
-    this._debugGroup = this.add.group([bg, this.debugFps, this.debugSeed, this.debugRace]);
   }
 
   update() {
