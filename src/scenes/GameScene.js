@@ -65,16 +65,24 @@ export class GameScene extends Phaser.Scene {
         if (eliminated) this.camManager?.followEliminated(eliminated, this._lastTime ?? this.time.now);
       }),
       EventBus.on('RACE_RESTART', () => {
-        this._raceUnsubs?.forEach(u => u());
-        this.audio?.stop();
-        this.chaos?.stop();
-        this.matter.world.timeScale = 1;
+        this._cleanup();
         this.scene.restart();
       })
     ];
 
     this.raceManager.start();
     this.chaos = new ChaosEventManager(this, this.seed);
+  }
+
+  _cleanup() {
+    this.racers?.forEach(r => r.destroy());
+    this.racers = [];
+    this._raceUnsubs?.forEach(u => u?.());
+    this._raceUnsubs = [];
+    this.commentary?.stop();
+    this.audio?.stop();
+    this.chaos?.stop();
+    this.matter.world.timeScale = 1;
   }
 
   _buildArena(seed) {
