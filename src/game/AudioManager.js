@@ -24,6 +24,10 @@ export class AudioManager {
   stop() {
     this._subs.forEach(u => u());
     this._subs = [];
+    if (this._ctx) {
+      this._ctx.close();
+      this._ctx = null;
+    }
   }
 
   _beep(freq, dur, type = 'sine') {
@@ -55,6 +59,7 @@ export class AudioManager {
       gain.connect(this._ctx.destination);
       gain.gain.value = 0.08;
       src.start();
+      src.stop(this._ctx.currentTime + dur + 0.05);
     } catch {}
   }
 

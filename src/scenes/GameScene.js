@@ -22,9 +22,9 @@ export class GameScene extends Phaser.Scene {
       const uiScene = this.scene.get('UIScene');
       this.commentary = new CommentaryManager(uiScene);
       this.commentary.start();
+      this.audio = new AudioManager(this);
+      this.audio.start();
     });
-    this.audio = new AudioManager(this);
-    this.audio.start();
     this.seed = Math.floor(Math.random() * 0xFFFFFF);
     this._buildArena(this.seed);
     this._spawnRacers(this._currentSpawnY ?? ZONE_GAME_Y + 80);
