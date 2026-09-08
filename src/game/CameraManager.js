@@ -59,6 +59,7 @@ export class CameraManager {
   }
 
   _setOverview() {
+    this.mode = MODES.OVERVIEW;
     this.cam.pan(CANVAS_W / 2, CANVAS_H / 2, 600, 'Sine.easeInOut');
     this.cam.zoomTo(1, 600, 'Sine.easeInOut');
   }
