@@ -188,6 +188,8 @@ export class UIScene extends Phaser.Scene {
     this._lbTimer?.remove();
     this._lbTimer = null;
     this._stopMidRaceCta();
+    this._ttsCancel();
+    if (this._ttsCtx) { this._ttsCtx.close(); this._ttsCtx = null; }
   }
 
   _showCountdown(value) {
@@ -265,13 +267,17 @@ export class UIScene extends Phaser.Scene {
   }
 
   _initTTS() {
-    this._ttsVoice        = null;
-    this._ttsCurrentAudio = null;
-    // Default: Google Translate TTS via HTML Audio (works in OBS — no CDN dependency)
-    // Upgrade to Web Speech API only if the browser actually has voices (regular browsers)
-    this._ttsEngine = 'google';
+    this._ttsVoice  = null;
+    this._ttsNode   = null;
+    this._ttsSeq    = 0;
+    this._ttsEngine = 'stream'; // StreamElements TTS via Web Audio API (works in OBS)
+
+    // Create a dedicated AudioContext for TTS — Web Audio API is guaranteed to work in OBS
+    try { this._ttsCtx = new AudioContext(); } catch { this._ttsCtx = null; }
+
+    // Upgrade to Web Speech API if browser has voices (regular Chrome/Edge)
     if (window.speechSynthesis) {
-      const tryWebSpeech = (n = 0) => {
+      const tryWS = (n = 0) => {
         const voices = window.speechSynthesis.getVoices();
         if (voices.length > 0) {
           this._ttsEngine = 'webspeech';
@@ -279,40 +285,35 @@ export class UIScene extends Phaser.Scene {
             voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
             voices.find(v => /en[-_]GB/i.test(v.lang) && /daniel|george|male/i.test(v.name)) ||
             voices.find(v => /en[-_]/i.test(v.lang) && !/female|zira|susan|karen|victoria/i.test(v.name)) ||
-            voices.find(v => /en/i.test(v.lang)) ||
-            null;
+            voices.find(v => /en/i.test(v.lang)) || null;
           return;
         }
-        if (n < 10) setTimeout(() => tryWebSpeech(n + 1), 300);
-        // else stay on 'google'
+        if (n < 10) setTimeout(() => tryWS(n + 1), 300);
       };
-      window.speechSynthesis.addEventListener('voiceschanged', () => tryWebSpeech());
-      tryWebSpeech();
+      window.speechSynthesis.addEventListener('voiceschanged', () => tryWS());
+      tryWS();
     }
   }
 
   _ttsCancel() {
-    if (this._ttsCurrentAudio) {
-      this._ttsCurrentAudio.pause();
-      this._ttsCurrentAudio.src = '';
-      this._ttsCurrentAudio = null;
-    }
+    try { this._ttsNode?.stop(); } catch {}
+    this._ttsNode = null;
     window.speechSynthesis?.cancel?.();
   }
 
   _speak(text) {
     if (this._ttsPriority) return;
     this._ttsCancel();
-    this._ttsPlay(text);
+    this._ttsRun(text, ++this._ttsSeq);
   }
 
   _speakPriority(text) {
     this._ttsCancel();
     this._ttsPriority = true;
-    this._ttsPlay(text, () => { this._ttsPriority = false; });
+    this._ttsRun(text, ++this._ttsSeq, () => { this._ttsPriority = false; });
   }
 
-  _ttsPlay(text, onEnd) {
+  async _ttsRun(text, seq, onEnd) {
     if (this._ttsEngine === 'webspeech' && window.speechSynthesis) {
       const u = new SpeechSynthesisUtterance(text);
       u.rate = 1.15; u.pitch = 1.1; u.volume = 1.0;
@@ -321,10 +322,34 @@ export class UIScene extends Phaser.Scene {
       window.speechSynthesis.speak(u);
       return;
     }
-    // Google Translate TTS — Audio element loads cross-origin media without CORS restrictions
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=en-us&client=tw-ob`;
+
+    // StreamElements TTS (Amazon Polly, works in OBS overlays)
+    const url = `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(text)}`;
+
+    // Primary: fetch → decode → Web Audio API (OBS captures this for certain)
+    if (this._ttsCtx) {
+      try {
+        if (this._ttsCtx.state === 'suspended') await this._ttsCtx.resume();
+        if (seq !== this._ttsSeq) { onEnd?.(); return; }
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error(resp.status);
+        const buf  = await resp.arrayBuffer();
+        if (seq !== this._ttsSeq) { onEnd?.(); return; }
+        const decoded = await this._ttsCtx.decodeAudioData(buf);
+        if (seq !== this._ttsSeq) { onEnd?.(); return; }
+        const src = this._ttsCtx.createBufferSource();
+        src.buffer = decoded;
+        src.connect(this._ttsCtx.destination);
+        this._ttsNode = src;
+        if (onEnd) src.onended = onEnd;
+        src.start();
+        return;
+      } catch {}
+    }
+
+    // Fallback: HTML Audio element
+    if (seq !== this._ttsSeq) { onEnd?.(); return; }
     const audio = new Audio(url);
-    this._ttsCurrentAudio = audio;
     audio.volume = 1.0;
     if (onEnd) { audio.onended = onEnd; audio.onerror = () => onEnd(); }
     audio.play().catch(() => onEnd?.());
