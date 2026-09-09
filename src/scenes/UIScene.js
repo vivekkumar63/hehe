@@ -143,7 +143,7 @@ export class UIScene extends Phaser.Scene {
   _setupEventListeners() {
     return [
       EventBus.on('COUNTDOWN',          ({ value })   => this._showCountdown(value)),
-      EventBus.on('RACE_PREP',          ({ raceNumber }) => { this.setRaceNumber(raceNumber); this.updateLeaderboard(); }),
+      EventBus.on('RACE_PREP',          ({ raceNumber }) => { this.setRaceNumber(raceNumber); this.updateLeaderboard(); this._showYTCallToAction(); }),
       EventBus.on('RACE_TIMER', ({ remaining }) => {
         if (!this.timerText) return;
         if (remaining === null) { this.timerText.setText('--:--'); return; }
@@ -328,6 +328,89 @@ export class UIScene extends Phaser.Scene {
       this._darknessOverlay?.destroy();
       this._darknessOverlay = null;
     }
+  }
+
+  _showYTCallToAction() {
+    const cx = CANVAS_W / 2;
+    const cy = ZONE_GAME_Y + ZONE_GAME_H * 0.5;
+    const D  = 160; // depth layer
+
+    // ── Background panel ──────────────────────────────────────────────────────
+    const bg = this.add.graphics().setDepth(D).setAlpha(0);
+    bg.fillStyle(0x0a0a0a, 0.92);
+    bg.fillRoundedRect(cx - 490, cy - 255, 980, 510, 28);
+    bg.lineStyle(5, 0xff0000, 1);
+    bg.strokeRoundedRect(cx - 490, cy - 255, 980, 510, 28);
+    // inner accent line
+    bg.lineStyle(2, 0xff6600, 0.5);
+    bg.strokeRoundedRect(cx - 480, cy - 245, 960, 490, 22);
+
+    // ── Header ────────────────────────────────────────────────────────────────
+    const header = this.add.text(cx, cy - 190, '❤️  ENJOYING THE SHOW?  ❤️', {
+      fontSize:        '52px',
+      fontFamily:      'Arial Black, sans-serif',
+      color:           '#ff4444',
+      stroke:          '#000000',
+      strokeThickness: 5,
+      shadow: { color: '#ff0000', blur: 22, fill: true },
+    }).setOrigin(0.5).setDepth(D + 1).setAlpha(0).setScale(0);
+
+    // ── Three CTA rows ────────────────────────────────────────────────────────
+    const rows = [
+      { label: '👍  LIKE THE VIDEO',      color: '#ffdd00', shadow: '#ff8800' },
+      { label: '🔔  SUBSCRIBE FOR MORE',  color: '#ff4444', shadow: '#ff0000' },
+      { label: '💬  DROP A COMMENT',       color: '#44ccff', shadow: '#0088ff' },
+    ].map((row, i) => {
+      const y = cy - 75 + i * 115;
+      return this.add.text(cx, y, row.label, {
+        fontSize:        '68px',
+        fontFamily:      'Arial Black, sans-serif',
+        color:           row.color,
+        stroke:          '#000000',
+        strokeThickness: 7,
+        shadow: { color: row.shadow, blur: 28, fill: true },
+      }).setOrigin(0.5).setDepth(D + 1).setAlpha(0).setScale(0);
+    });
+
+    const all = [bg, header, ...rows];
+
+    // ── Entrance animations ───────────────────────────────────────────────────
+    this.tweens.add({ targets: bg, alpha: 1, duration: 220 });
+
+    this.time.delayedCall(120, () => {
+      this.tweens.add({ targets: header, alpha: 1, scale: 1, duration: 420, ease: 'Back.out(2.5)' });
+    });
+
+    rows.forEach((row, i) => {
+      this.time.delayedCall(280 + i * 170, () => {
+        this.tweens.add({ targets: row, alpha: 1, scale: 1, duration: 420, ease: 'Back.out(2.5)' });
+      });
+    });
+
+    // ── Pulse once after all items are in ────────────────────────────────────
+    this.time.delayedCall(1400, () => {
+      this.tweens.add({
+        targets: [header, ...rows],
+        scaleX: 1.07, scaleY: 1.07,
+        duration: 130, yoyo: true, repeat: 1, ease: 'Sine.inOut',
+      });
+    });
+
+    // ── Flash red border ──────────────────────────────────────────────────────
+    [600, 1000].forEach(delay => {
+      this.time.delayedCall(delay, () => {
+        this.tweens.add({ targets: bg, alpha: 0.5, duration: 80, yoyo: true });
+      });
+    });
+
+    // ── Exit ──────────────────────────────────────────────────────────────────
+    this.time.delayedCall(3600, () => {
+      this.tweens.add({
+        targets: all, alpha: 0, scaleX: 0.88, scaleY: 0.88,
+        duration: 380, ease: 'Power2.in',
+        onComplete: () => all.forEach(o => o.destroy()),
+      });
+    });
   }
 
   _buildDebugOverlay() {
