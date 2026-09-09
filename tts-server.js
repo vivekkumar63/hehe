@@ -21,8 +21,6 @@ const MIME = {
 };
 
 // ── Persistent PowerShell TTS process ────────────────────────────────────────
-// One process stays alive and reads text lines from stdin, speaking each in order.
-// This eliminates the ~300ms spawn overhead on every utterance.
 const psScript = [
   'Add-Type -AssemblyName System.Speech;',
   '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;',
@@ -42,31 +40,52 @@ const ps = cp.spawn('powershell', ['-NoProfile', '-Command', psScript], {
 ps.on('error', e => console.error('[TTS] PowerShell error:', e.message));
 ps.on('close', code => { console.log('[TTS] PowerShell exited', code); process.exit(1); });
 
-// Queue depth tracking — drop new messages if too many are already pending
-// so old commentary doesn't play after the race has moved on.
-const MAX_QUEUE = 3;
-let queueDepth = 0;
+// ── Priority queue ────────────────────────────────────────────────────────────
+// We send one line at a time and wait for the estimated duration before
+// sending the next, so we can always insert priority items at the front.
+const MAX_NORMAL = 2; // max regular messages waiting
+const queue      = []; // [{ text, priority }]
+let   speaking   = false;
 
-function speak(text) {
-  if (queueDepth >= MAX_QUEUE) return;
+function _next() {
+  if (speaking || queue.length === 0) return;
+  const { text } = queue.shift();
+  speaking = true;
+  process.stdout.write('[TTS] ' + text + '\n');
+  ps.stdin.write(text + '\n');
+  const ms = Math.max(1500, text.split(/\s+/).length * 370);
+  setTimeout(() => { speaking = false; _next(); }, ms);
+}
+
+function speak(text, priority = false) {
   const safe = text.replace(/[\r\n]/g, ' ').replace(/'/g, ' ').trim();
   if (!safe) return;
 
-  queueDepth++;
-  process.stdout.write('[TTS] ' + safe + '\n');
-  ps.stdin.write(safe + '\n');
+  if (priority) {
+    // Jump to front — plays right after the current utterance finishes
+    queue.unshift({ text: safe, priority: true });
+    // Clear any normal messages behind it so old commentary doesn't follow
+    for (let i = queue.length - 1; i > 0; i--) {
+      if (!queue[i].priority) queue.splice(i, 1);
+    }
+  } else {
+    // Drop if too many normal messages are already waiting
+    const normalCount = queue.filter(q => !q.priority).length;
+    if (normalCount >= MAX_NORMAL) return;
+    queue.push({ text: safe, priority: false });
+  }
 
-  // Estimate speech duration to release the queue slot
-  const ms = Math.max(1500, safe.split(/\s+/).length * 370);
-  setTimeout(() => { queueDepth = Math.max(0, queueDepth - 1); }, ms);
+  _next();
 }
 
 // ── HTTP server ───────────────────────────────────────────────────────────────
 http.createServer((req, res) => {
 
   if (req.url.startsWith('/speak')) {
-    const text = new URLSearchParams(req.url.slice(req.url.indexOf('?') + 1)).get('t') || '';
-    if (text) speak(text);
+    const params   = new URLSearchParams(req.url.slice(req.url.indexOf('?') + 1));
+    const text     = params.get('t') || '';
+    const priority = params.has('p');
+    if (text) speak(text, priority);
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');
     return;

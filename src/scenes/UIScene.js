@@ -274,7 +274,7 @@ export class UIScene extends Phaser.Scene {
   }
 
   _speakPriority(text) {
-    fetch('/speak?t=' + encodeURIComponent(text)).catch(() => {});
+    fetch('/speak?t=' + encodeURIComponent(text) + '&p=1').catch(() => {});
   }
 
   setRemaining(current, total) {
