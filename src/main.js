@@ -1,8 +1,11 @@
 import Phaser from 'phaser';
 import { CANVAS_W, CANVAS_H, GRAVITY_Y } from './constants.js';
-import { BootScene } from './scenes/BootScene.js';
-import { GameScene } from './scenes/GameScene.js';
-import { UIScene }   from './scenes/UIScene.js';
+import { BootScene }    from './scenes/BootScene.js';
+import { GameScene }    from './scenes/GameScene.js';
+import { UIScene }      from './scenes/UIScene.js';
+import { initStreaming } from './streaming.js';
+
+initStreaming();
 
 new Phaser.Game({
   type: Phaser.CANVAS,

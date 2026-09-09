@@ -5,12 +5,26 @@ export class AudioManager {
     this.scene  = scene;
     this._subs  = [];
     this._ctx   = null;
+    this._out   = null; // master gain → ctx.destination (+ optional stream dest)
   }
 
   start() {
     try {
       this._ctx = new AudioContext();
+      window.__gameAudioCtx = this._ctx;
     } catch { return; }
+
+    // Master gain routed to speakers + streaming tap
+    this._out = this._ctx.createGain();
+    this._out.gain.value = 1;
+    this._out.connect(this._ctx.destination);
+
+    // Expose a MediaStream so streaming.js can capture audio
+    try {
+      const streamDest = this._ctx.createMediaStreamDestination();
+      this._out.connect(streamDest);
+      window.__gameAudioStream = streamDest.stream;
+    } catch {}
 
     this._subs = [
       EventBus.on('COUNTDOWN',          d => this._beep(d.value === 'GO!' ? 880 : 440, 0.12)),
@@ -27,15 +41,18 @@ export class AudioManager {
       this._ctx.close();
       this._ctx = null;
     }
+    this._out = null;
+    window.__gameAudioCtx    = null;
+    window.__gameAudioStream = null;
   }
 
   _beep(freq, dur, type = 'sine') {
-    if (!this._ctx) return;
+    if (!this._ctx || !this._out) return;
     try {
       const osc  = this._ctx.createOscillator();
       const gain = this._ctx.createGain();
       osc.connect(gain);
-      gain.connect(this._ctx.destination);
+      gain.connect(this._out);
       osc.type      = type;
       osc.frequency.value = freq;
       gain.gain.setValueAtTime(0.15, this._ctx.currentTime);
@@ -46,7 +63,7 @@ export class AudioManager {
   }
 
   _noise(dur) {
-    if (!this._ctx) return;
+    if (!this._ctx || !this._out) return;
     try {
       const buf  = this._ctx.createBuffer(1, this._ctx.sampleRate * dur, this._ctx.sampleRate);
       const data = buf.getChannelData(0);
@@ -55,7 +72,7 @@ export class AudioManager {
       const gain = this._ctx.createGain();
       src.buffer = buf;
       src.connect(gain);
-      gain.connect(this._ctx.destination);
+      gain.connect(this._out);
       gain.gain.value = 0.015;
       src.start();
       src.stop(this._ctx.currentTime + dur + 0.05);
