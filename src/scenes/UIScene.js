@@ -188,8 +188,8 @@ export class UIScene extends Phaser.Scene {
     this._lbTimer?.remove();
     this._lbTimer = null;
     this._stopMidRaceCta();
-    this._ttsCancel();
-    if (this._ttsCtx) { this._ttsCtx.close(); this._ttsCtx = null; }
+    this._ttsDoneSub?.(); this._ttsDoneSub = null;
+    window.speechSynthesis?.cancel?.();
   }
 
   _showCountdown(value) {
@@ -267,11 +267,9 @@ export class UIScene extends Phaser.Scene {
   }
 
   async _initTTS() {
-    this._ttsVoice  = null;
+    this._ttsSeq    = 0;
     this._ttsEngine = 'none';
-
-    // Show loading status so user can see TTS state in OBS
-    this._setTTSStatus('TTS: loading...');
+    this._ttsDoneSub = null;
 
     try {
       const [{ default: meSpeak }, configMod, voiceMod] = await Promise.all([
@@ -283,12 +281,8 @@ export class UIScene extends Phaser.Scene {
       meSpeak.loadVoice(voiceMod.default ?? voiceMod);
       this._meSpeak   = meSpeak;
       this._ttsEngine = 'mespeak';
-      this._setTTSStatus('TTS: ready (eSpeak)');
-      // Fire a test utterance so user hears immediately if it works
-      meSpeak.speak('Commentary ready', { speed: 165, pitch: 52 });
-    } catch (e) {
-      this._setTTSStatus(`TTS: eSpeak failed — ${e?.message ?? e}`);
-      // Fallback: Web Speech API
+    } catch {
+      // Web Speech API fallback (works in regular browsers, not OBS)
       if (window.speechSynthesis) {
         this._ttsEngine = 'webspeech';
         const pick = () => {
@@ -302,33 +296,37 @@ export class UIScene extends Phaser.Scene {
         pick();
       }
     }
-    // Clear status after 6 s
-    this.time?.delayedCall(6000, () => this._setTTSStatus(''));
-  }
-
-  _setTTSStatus(msg) {
-    if (this.commentaryText) this.commentaryText.setText(msg);
-  }
-
-  _ttsCancel() {
-    window.speechSynthesis?.cancel?.();
   }
 
   _speak(text) {
     if (this._ttsPriority) return;
-    this._ttsPlay(text);
+    this._ttsEmit(text);
   }
 
   _speakPriority(text) {
     this._ttsPriority = true;
-    this._ttsPlay(text, () => { this._ttsPriority = false; });
+    this._ttsEmit(text, () => { this._ttsPriority = false; });
   }
 
-  _ttsPlay(text, onEnd) {
-    // meSpeak: built-in Web Audio API playback — works in OBS same as beep sounds
+  _ttsEmit(text, onEnd) {
+    // meSpeak generates WAV bytes → AudioManager plays via its proven AudioContext
     if (this._ttsEngine === 'mespeak' && this._meSpeak) {
-      this._meSpeak.speak(text, { speed: 165, pitch: 52, wordgap: 1 }, onEnd ?? null);
-      return;
+      try {
+        const buf = this._meSpeak.speak(text, { rawdata: 'buffer', speed: 165, pitch: 52 });
+        if (buf) {
+          const id = ++this._ttsSeq;
+          if (onEnd) {
+            this._ttsDoneSub?.();
+            this._ttsDoneSub = EventBus.on('TTS_DONE', doneId => {
+              if (doneId !== id) return;
+              this._ttsDoneSub?.(); this._ttsDoneSub = null;
+              onEnd();
+            });
+          }
+          EventBus.emit('PLAY_TTS_BUFFER', { buf: buf.slice(0), id });
+          return;
+        }
+      } catch {}
     }
 
     // Web Speech API (regular browsers only)
