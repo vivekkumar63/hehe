@@ -21,7 +21,7 @@ export function initStreaming() {
     bottom:       '30px',
     left:         '50%',
     transform:    'translateX(-50%)',
-    zIndex:       '9999',
+    zIndex:       '99999',
     padding:      '14px 40px',
     fontSize:     '20px',
     fontWeight:   'bold',

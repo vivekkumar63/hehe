@@ -5,8 +5,6 @@ import { GameScene }    from './scenes/GameScene.js';
 import { UIScene }      from './scenes/UIScene.js';
 import { initStreaming } from './streaming.js';
 
-initStreaming();
-
 new Phaser.Game({
   type: Phaser.CANVAS,
   width: CANVAS_W,
@@ -23,3 +21,5 @@ new Phaser.Game({
   },
   scene: [BootScene, GameScene, UIScene]
 });
+
+initStreaming();
