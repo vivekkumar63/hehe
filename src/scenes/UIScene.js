@@ -471,7 +471,7 @@ export class UIScene extends Phaser.Scene {
     this._midRaceCtaActive = true;
 
     const cx   = CANVAS_W / 2;
-    const banH = 150;
+    const banH = 330;
     const banY = ZONE_GAME_Y + ZONE_GAME_H - banH;
     const D    = 155;
 
@@ -480,19 +480,18 @@ export class UIScene extends Phaser.Scene {
     bg.fillStyle(0x000000, 0.62);
     bg.fillRect(0, banY, CANVAS_W, banH);
     bg.fillStyle(0xff0000, 1);
-    bg.fillRect(0, banY, CANVAS_W, 6);       // top red stripe
-    bg.fillRect(0, banY + banH - 6, CANVAS_W, 6); // bottom red stripe
+    bg.fillRect(0, banY, CANVAS_W, 6);
+    bg.fillRect(0, banY + banH - 6, CANVAS_W, 6);
 
-    // Three items in one row
+    // Three items stacked on separate lines
     const defs = [
       { text: '👍  LIKE',      color: '#ffd700' },
       { text: '↗️  SHARE',     color: '#88ff88' },
       { text: '🔔  SUBSCRIBE', color: '#ff5555' },
     ];
-    const colW = CANVAS_W / 3;
     const txtObjs = defs.map((d, i) =>
-      this.add.text(colW * i + colW / 2, banY + banH / 2, d.text, {
-        fontSize: '64px', fontFamily: 'Arial Black, sans-serif',
+      this.add.text(cx, banY + 75 + i * 95, d.text, {
+        fontSize: '72px', fontFamily: 'Arial Black, sans-serif',
         color: d.color, stroke: '#000000', strokeThickness: 7,
       }).setOrigin(0.5, 0.5).setDepth(D + 1).setAlpha(0)
     );
