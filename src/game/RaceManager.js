@@ -2,7 +2,7 @@ import { EventBus } from '../utils/eventBus.js';
 import { ScoreManager } from './ScoreManager.js';
 
 const STATES = { PREP: 'PREP', COUNTDOWN: 'COUNTDOWN', RACING: 'RACING', WINNER: 'WINNER', INTERMISSION: 'INTERMISSION' };
-const RACE_DURATION_S = 10 * 60; // 10 minutes
+const RACE_DURATION_S = 5 * 60; // 5 minutes
 
 export class RaceManager {
   constructor(scene) {

@@ -119,7 +119,7 @@ export class UIScene extends Phaser.Scene {
       fontSize: '20px', fontFamily: 'Arial Black, sans-serif', color: '#aaaacc',
     }).setOrigin(1, 0).setDepth(50);
 
-    this.distanceText = this.add.text(x - 14, y + 34, '4000 m', {
+    this.distanceText = this.add.text(x - 14, y + 34, '2000 m', {
       fontSize: '38px', fontFamily: 'Arial Black, sans-serif',
       color: '#ffdd00', stroke: '#000000', strokeThickness: 4,
     }).setOrigin(1, 0).setDepth(50);
@@ -134,7 +134,7 @@ export class UIScene extends Phaser.Scene {
     this.add.text(x + 14, y + 10, 'TIME LEFT', {
       fontSize: '20px', fontFamily: 'Arial Black, sans-serif', color: '#aaaacc',
     }).setOrigin(0, 0).setDepth(50);
-    this.timerText = this.add.text(x + 14, y + 34, '10:00', {
+    this.timerText = this.add.text(x + 14, y + 34, '5:00', {
       fontSize: '38px', fontFamily: 'Arial Black, sans-serif',
       color: '#ff8800', stroke: '#000000', strokeThickness: 4,
     }).setOrigin(0, 0).setDepth(50);
