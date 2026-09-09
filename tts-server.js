@@ -46,11 +46,12 @@ http.createServer((req, res) => {
   }
 
   const urlPath  = req.url.split('?')[0];
-  const filePath = path.resolve(DIST, '.' + urlPath);
-  if (!filePath.startsWith(DIST)) { res.writeHead(403); res.end(); return; }
+  const relative = urlPath === '/' ? 'index.html' : urlPath.replace(/^\//, '');
+  const filePath = path.join(DIST, relative);
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
+      // fallback to index.html for SPA routing
       fs.readFile(path.join(DIST, 'index.html'), (_e, d) => {
         if (_e) { res.writeHead(404); res.end('Not found'); return; }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
