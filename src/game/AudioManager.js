@@ -57,7 +57,7 @@ export class AudioManager {
       src.buffer = buf;
       src.connect(gain);
       gain.connect(this._ctx.destination);
-      gain.gain.value = 0.08;
+      gain.gain.value = 0.015;
       src.start();
       src.stop(this._ctx.currentTime + dur + 0.05);
     } catch {}
