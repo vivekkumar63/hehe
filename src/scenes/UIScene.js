@@ -63,23 +63,35 @@ export class UIScene extends Phaser.Scene {
   _drawLeaderboardZone() {
     const y = ZONE_HEADER_H;
     const h = ZONE_BOARD_H;
+
+    // Background
     const g = this.add.graphics();
     g.fillGradientStyle(0x0a1520, 0x0a1520, 0x0f1f10, 0x0f1f10, 1);
     g.fillRect(0, y, CANVAS_W, h);
-    g.lineStyle(1, 0x2a4a2a, 0.6);
-    g.strokeRect(0, y, CANVAS_W, h);
 
-    this.add.text(CANVAS_W / 2, y + 20, "🏆 TODAY'S CHAMPIONS", {
-      fontSize: '28px', fontFamily: 'Arial Black, sans-serif', color: '#88cc44'
-    }).setOrigin(0.5, 0);
+    // Outer border rectangle
+    g.lineStyle(3, 0x44cc44, 0.9);
+    g.strokeRect(6, y + 6, CANVAS_W - 12, h - 12);
+    // Inner accent
+    g.lineStyle(1, 0x88ff44, 0.35);
+    g.strokeRect(12, y + 12, CANVAS_W - 24, h - 24);
 
+    // Title bar
+    g.fillStyle(0x112211, 1);
+    g.fillRect(6, y + 6, CANVAS_W - 12, 44);
+
+    this.add.text(CANVAS_W / 2, y + 28, "🏆  TODAY'S CHAMPIONS  🏆", {
+      fontSize: '26px', fontFamily: 'Arial Black, sans-serif', color: '#88ff44',
+      stroke: '#003300', strokeThickness: 3,
+    }).setOrigin(0.5, 0.5);
+
+    // Three visible row slots inside the box
     this.leaderboardRows = [];
-    const medals = ['🥇','🥈','🥉'];
     for (let i = 0; i < 3; i++) {
-      const rowY = y + 56 + i * 60;
-      const t = this.add.text(60, rowY, `${medals[i]}  —`, {
-        fontSize: '36px', fontFamily: 'Arial, sans-serif', color: '#aaaaaa'
-      }).setOrigin(0, 0.5);
+      const rowY = y + 68 + i * 62;
+      const t = this.add.text(CANVAS_W / 2, rowY, '', {
+        fontSize: '34px', fontFamily: 'Arial, sans-serif', color: '#aaaaaa',
+      }).setOrigin(0.5, 0.5);
       this.leaderboardRows.push(t);
     }
   }
@@ -170,6 +182,8 @@ export class UIScene extends Phaser.Scene {
   shutdown() {
     this._unsubs?.forEach(u => u());
     this._unsubs = [];
+    this._lbTimer?.remove();
+    this._lbTimer = null;
   }
 
   _showCountdown(value) {
@@ -250,18 +264,51 @@ export class UIScene extends Phaser.Scene {
   }
 
   updateLeaderboard() {
-    const top    = this.scores.getTopToday(3);
-    const medals = ['🥇','🥈','🥉'];
-    this.leaderboardRows?.forEach((row, i) => {
-      const entry = top[i];
-      if (entry) {
-        const c = this._countriesMap[entry.id];
-        row.setText(`${medals[i]}  ${c?.emoji ?? ''} ${c?.name ?? entry.id}   ${entry.wins} WINS`);
-        row.setColor('#ffffff');
-      } else {
-        row.setText(`${medals[i]}  —`);
-        row.setColor('#555577');
-      }
+    // Stop any running cycle
+    this._lbTimer?.remove();
+    this._lbTimer = null;
+
+    const all    = this.scores.getTopToday(50);
+    const medals = ['🥇', '🥈', '🥉'];
+    const PAGE   = 3;
+
+    const renderPage = (page) => {
+      const offset = page * PAGE;
+      this.leaderboardRows?.forEach((row, i) => {
+        const entry = all[offset + i];
+        if (entry) {
+          const c    = this._countriesMap[entry.id];
+          const rank = offset + i;
+          const badge = rank < 3 ? medals[rank] : `#${rank + 1}`;
+          const wins  = entry.wins === 1 ? '1 WIN' : `${entry.wins} WINS`;
+          row.setText(`${badge}  ${c?.emoji ?? ''} ${c?.name ?? entry.id}   ${wins}`);
+          row.setColor(rank === 0 ? '#ffd700' : rank === 1 ? '#cccccc' : rank === 2 ? '#cd7f32' : '#aaddff');
+        } else {
+          row.setText('');
+        }
+      });
+    };
+
+    renderPage(0);
+
+    const numPages = Math.ceil(all.length / PAGE);
+    if (numPages < 2) return;
+
+    let page = 0;
+    this._lbTimer = this.time.addEvent({
+      delay: 2500,
+      repeat: -1,
+      callback: () => {
+        // Fade out current rows
+        this.tweens.add({
+          targets: this.leaderboardRows, alpha: 0, duration: 220,
+          onComplete: () => {
+            page = (page + 1) % numPages;
+            renderPage(page);
+            this.tweens.add({ targets: this.leaderboardRows, alpha: 1, duration: 220 });
+          },
+        });
+      },
     });
   }
 
