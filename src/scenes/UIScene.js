@@ -12,7 +12,7 @@ export class UIScene extends Phaser.Scene {
     this._drawLeaderboardZone();
     this._drawCommentaryZone();
     this._unsubs = this._setupEventListeners();
-    this._initTTS();
+    this._initTTS(); // async — loads meSpeak in background, ready before first commentary fires
     this.scores = new ScoreManager();
     this._countriesMap = Object.fromEntries(COUNTRIES.map(c => [c.id, c]));
     this.updateLeaderboard();
@@ -266,32 +266,38 @@ export class UIScene extends Phaser.Scene {
     this._speak(text);
   }
 
-  _initTTS() {
+  async _initTTS() {
     this._ttsVoice  = null;
     this._ttsNode   = null;
-    this._ttsSeq    = 0;
-    this._ttsEngine = 'stream'; // StreamElements TTS via Web Audio API (works in OBS)
+    this._ttsEngine = 'webspeech'; // fallback default
 
-    // Create a dedicated AudioContext for TTS — Web Audio API is guaranteed to work in OBS
+    // Dedicated AudioContext for TTS — same mechanism as beep sounds (works in OBS)
     try { this._ttsCtx = new AudioContext(); } catch { this._ttsCtx = null; }
 
-    // Upgrade to Web Speech API if browser has voices (regular Chrome/Edge)
-    if (window.speechSynthesis) {
-      const tryWS = (n = 0) => {
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-          this._ttsEngine = 'webspeech';
+    // Primary: meSpeak — bundled eSpeak, no network, plays via Web Audio API
+    try {
+      const [{ default: meSpeak }, configMod, voiceMod] = await Promise.all([
+        import('mespeak'),
+        import('mespeak/src/mespeak_config.json'),
+        import('mespeak/voices/en/en-us.json'),
+      ]);
+      meSpeak.loadConfig(configMod.default ?? configMod);
+      meSpeak.loadVoice(voiceMod.default ?? voiceMod);
+      this._meSpeak   = meSpeak;
+      this._ttsEngine = 'mespeak';
+    } catch {
+      // Fallback: Web Speech API (works in regular Chrome/Edge, not OBS)
+      if (window.speechSynthesis) {
+        const pick = () => {
+          const voices = window.speechSynthesis.getVoices();
+          if (!voices.length) return;
           this._ttsVoice =
             voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
-            voices.find(v => /en[-_]GB/i.test(v.lang) && /daniel|george|male/i.test(v.name)) ||
-            voices.find(v => /en[-_]/i.test(v.lang) && !/female|zira|susan|karen|victoria/i.test(v.name)) ||
             voices.find(v => /en/i.test(v.lang)) || null;
-          return;
-        }
-        if (n < 10) setTimeout(() => tryWS(n + 1), 300);
-      };
-      window.speechSynthesis.addEventListener('voiceschanged', () => tryWS());
-      tryWS();
+        };
+        window.speechSynthesis.addEventListener('voiceschanged', pick);
+        pick();
+      }
     }
   }
 
@@ -304,55 +310,44 @@ export class UIScene extends Phaser.Scene {
   _speak(text) {
     if (this._ttsPriority) return;
     this._ttsCancel();
-    this._ttsRun(text, ++this._ttsSeq);
+    this._ttsPlay(text);
   }
 
   _speakPriority(text) {
     this._ttsCancel();
     this._ttsPriority = true;
-    this._ttsRun(text, ++this._ttsSeq, () => { this._ttsPriority = false; });
+    this._ttsPlay(text, () => { this._ttsPriority = false; });
   }
 
-  async _ttsRun(text, seq, onEnd) {
-    if (this._ttsEngine === 'webspeech' && window.speechSynthesis) {
+  _ttsPlay(text, onEnd) {
+    // meSpeak: local eSpeak synthesis → AudioBuffer → Web Audio API → OBS captures it
+    if (this._ttsEngine === 'mespeak' && this._meSpeak && this._ttsCtx) {
+      try {
+        const wavBuf = this._meSpeak.speak(text, {
+          rawdata: 'buffer', speed: 165, pitch: 52, wordgap: 1,
+        });
+        if (wavBuf) {
+          this._ttsCtx.decodeAudioData(wavBuf.slice(0)).then(decoded => {
+            const src = this._ttsCtx.createBufferSource();
+            src.buffer  = decoded;
+            src.connect(this._ttsCtx.destination);
+            this._ttsNode = src;
+            if (onEnd) src.onended = onEnd;
+            src.start();
+          }).catch(() => onEnd?.());
+          return;
+        }
+      } catch { onEnd?.(); return; }
+    }
+
+    // Web Speech API (regular browsers only)
+    if (window.speechSynthesis) {
       const u = new SpeechSynthesisUtterance(text);
       u.rate = 1.15; u.pitch = 1.1; u.volume = 1.0;
       if (this._ttsVoice) u.voice = this._ttsVoice;
       if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
       window.speechSynthesis.speak(u);
-      return;
     }
-
-    // StreamElements TTS (Amazon Polly, works in OBS overlays)
-    const url = `https://api.streamelements.com/kappa/v2/speech?voice=Brian&text=${encodeURIComponent(text)}`;
-
-    // Primary: fetch → decode → Web Audio API (OBS captures this for certain)
-    if (this._ttsCtx) {
-      try {
-        if (this._ttsCtx.state === 'suspended') await this._ttsCtx.resume();
-        if (seq !== this._ttsSeq) { onEnd?.(); return; }
-        const resp = await fetch(url);
-        if (!resp.ok) throw new Error(resp.status);
-        const buf  = await resp.arrayBuffer();
-        if (seq !== this._ttsSeq) { onEnd?.(); return; }
-        const decoded = await this._ttsCtx.decodeAudioData(buf);
-        if (seq !== this._ttsSeq) { onEnd?.(); return; }
-        const src = this._ttsCtx.createBufferSource();
-        src.buffer = decoded;
-        src.connect(this._ttsCtx.destination);
-        this._ttsNode = src;
-        if (onEnd) src.onended = onEnd;
-        src.start();
-        return;
-      } catch {}
-    }
-
-    // Fallback: HTML Audio element
-    if (seq !== this._ttsSeq) { onEnd?.(); return; }
-    const audio = new Audio(url);
-    audio.volume = 1.0;
-    if (onEnd) { audio.onended = onEnd; audio.onerror = () => onEnd(); }
-    audio.play().catch(() => onEnd?.());
   }
 
   setRemaining(current, total) {
