@@ -62,8 +62,11 @@ export class GameScene extends Phaser.Scene {
       })
     ];
 
-    this.raceManager.start();
-    this.chaos = new ChaosEventManager(this, this.seed);
+    // Delay one tick so UIScene.create() registers its listeners before RACE_PREP fires
+    this.time.delayedCall(100, () => {
+      this.raceManager.start();
+      this.chaos = new ChaosEventManager(this, this.seed);
+    });
   }
 
   _cleanup() {
