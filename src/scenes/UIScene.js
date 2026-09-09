@@ -188,8 +188,6 @@ export class UIScene extends Phaser.Scene {
     this._lbTimer?.remove();
     this._lbTimer = null;
     this._stopMidRaceCta();
-    this._ttsDoneSub?.(); this._ttsDoneSub = null;
-    window.speechSynthesis?.cancel?.();
   }
 
   _showCountdown(value) {
@@ -272,15 +270,11 @@ export class UIScene extends Phaser.Scene {
   }
 
   _speak(text) {
-    if (this._ttsPriority) return;
     fetch('/speak?t=' + encodeURIComponent(text)).catch(() => {});
   }
 
   _speakPriority(text) {
-    this._ttsPriority = true;
     fetch('/speak?t=' + encodeURIComponent(text)).catch(() => {});
-    // Release lock after estimated speech duration (~400 ms per word, min 3 s)
-    setTimeout(() => { this._ttsPriority = false; }, Math.max(3000, text.split(' ').length * 400));
   }
 
   setRemaining(current, total) {

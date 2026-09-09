@@ -20,26 +20,53 @@ const MIME = {
   '.wasm': 'application/wasm',
 };
 
-let busy = false;
+// ── Persistent PowerShell TTS process ────────────────────────────────────────
+// One process stays alive and reads text lines from stdin, speaking each in order.
+// This eliminates the ~300ms spawn overhead on every utterance.
+const psScript = [
+  'Add-Type -AssemblyName System.Speech;',
+  '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;',
+  '$s.Rate = 2;',
+  'while ($true) {',
+  '  $line = [Console]::In.ReadLine();',
+  '  if ($null -eq $line) { break }',
+  '  if ($line.Length -gt 0) { $s.Speak($line) }',
+  '}',
+].join(' ');
+
+const ps = cp.spawn('powershell', ['-NoProfile', '-Command', psScript], {
+  windowsHide: true,
+  stdio: ['pipe', 'ignore', 'ignore'],
+});
+
+ps.on('error', e => console.error('[TTS] PowerShell error:', e.message));
+ps.on('close', code => { console.log('[TTS] PowerShell exited', code); process.exit(1); });
+
+// Queue depth tracking — drop new messages if too many are already pending
+// so old commentary doesn't play after the race has moved on.
+const MAX_QUEUE = 3;
+let queueDepth = 0;
+
 function speak(text) {
-  if (busy) return;
-  busy = true;
-  const safe = text.replace(/'/g, ' ');
-  const cmd  = [
-    'Add-Type -AssemblyName System.Speech;',
-    '$s = New-Object System.Speech.Synthesis.SpeechSynthesizer;',
-    '$s.Rate = 1;',
-    `$s.Speak('${safe}');`,
-  ].join(' ');
-  cp.spawn('powershell', ['-NoProfile', '-Command', cmd], { windowsHide: true, stdio: 'ignore' })
-    .on('close', () => { busy = false; });
+  if (queueDepth >= MAX_QUEUE) return;
+  const safe = text.replace(/[\r\n]/g, ' ').replace(/'/g, ' ').trim();
+  if (!safe) return;
+
+  queueDepth++;
+  process.stdout.write('[TTS] ' + safe + '\n');
+  ps.stdin.write(safe + '\n');
+
+  // Estimate speech duration to release the queue slot
+  const ms = Math.max(1500, safe.split(/\s+/).length * 370);
+  setTimeout(() => { queueDepth = Math.max(0, queueDepth - 1); }, ms);
 }
 
+// ── HTTP server ───────────────────────────────────────────────────────────────
 http.createServer((req, res) => {
 
   if (req.url.startsWith('/speak')) {
     const text = new URLSearchParams(req.url.slice(req.url.indexOf('?') + 1)).get('t') || '';
-    if (text) { process.stdout.write('[TTS] ' + text + '\n'); speak(text); }
+    if (text) speak(text);
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('ok');
     return;
@@ -51,7 +78,6 @@ http.createServer((req, res) => {
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      // fallback to index.html for SPA routing
       fs.readFile(path.join(DIST, 'index.html'), (_e, d) => {
         if (_e) { res.writeHead(404); res.end('Not found'); return; }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
