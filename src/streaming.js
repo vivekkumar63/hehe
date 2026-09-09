@@ -63,7 +63,7 @@ function startStream(btn, WS_URL) {
     ]);
 
     const mimeType = _pickMime();
-    const recorder = new MediaRecorder(combined, { mimeType, videoBitsPerSecond: 4_000_000 });
+    const recorder = new MediaRecorder(combined, { mimeType, videoBitsPerSecond: 12_000_000 });
 
     recorder.ondataavailable = e => {
       if (e.data.size > 0 && ws.readyState === WebSocket.OPEN) {
