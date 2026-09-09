@@ -678,20 +678,28 @@ export class GameScene extends Phaser.Scene {
     });
 
     // ── Bar-ball separation: prevent two balls sticking on same bar ───────────
-    // setVelocity overrides physics resolution every frame, so Matter.js can
-    // never naturally push overlapping bar balls apart — we must do it manually.
     const barRacers = alive.filter(r => r._onBar);
+    const minX = WALL_T + RACER_RADIUS + 2;
+    const maxX = CANVAS_W - WALL_T - RACER_RADIUS - 2;
     for (let i = 0; i < barRacers.length; i++) {
       for (let j = i + 1; j < barRacers.length; j++) {
         const ri = barRacers[i], rj = barRacers[j];
-        const dx  = rj.body.position.x - ri.body.position.x;
+        // Only separate balls that are on the exact same bar
+        if (ri._onBar.barBody !== rj._onBar.barBody) continue;
+        const dx     = rj.body.position.x - ri.body.position.x;
         const minSep = RACER_RADIUS * 2 + 4;
         if (Math.abs(dx) < minSep) {
           const push = (minSep - Math.abs(dx)) / 2 + 1;
           const sign = dx >= 0 ? 1 : -1;
-          this.matter.body.setPosition(ri.body, { x: ri.body.position.x - sign * push, y: ri.body.position.y });
-          this.matter.body.setPosition(rj.body, { x: rj.body.position.x + sign * push, y: rj.body.position.y });
-          // Force directions apart so they slide away from each other
+          // Clamp to wall bounds so we never push a ball into a wall
+          this.matter.body.setPosition(ri.body, {
+            x: Math.max(minX, Math.min(maxX, ri.body.position.x - sign * push)),
+            y: ri.body.position.y,
+          });
+          this.matter.body.setPosition(rj.body, {
+            x: Math.max(minX, Math.min(maxX, rj.body.position.x + sign * push)),
+            y: rj.body.position.y,
+          });
           ri._onBar.dir = -sign;
           rj._onBar.dir =  sign;
         }
