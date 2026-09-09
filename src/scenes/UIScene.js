@@ -265,71 +265,69 @@ export class UIScene extends Phaser.Scene {
   }
 
   _initTTS() {
-    this._ttsVoice  = null;
-    this._ttsEngine = null;
-
-    // ResponsiveVoice works in OBS/CEF; prefer it when loaded
-    if (window.responsiveVoice) {
-      this._ttsEngine = 'responsive';
-      return;
-    }
-    // Wait up to 3s for ResponsiveVoice to load (async CDN), then fall back
-    const rvCheck = (attempts = 0) => {
-      if (window.responsiveVoice) { this._ttsEngine = 'responsive'; return; }
-      if (attempts < 15) { setTimeout(() => rvCheck(attempts + 1), 200); return; }
-      // No ResponsiveVoice — fall back to Web Speech API
-      if (!window.speechSynthesis) return;
-      this._ttsEngine = 'webspeech';
-      const pick = () => {
+    this._ttsVoice        = null;
+    this._ttsCurrentAudio = null;
+    // Default: Google Translate TTS via HTML Audio (works in OBS — no CDN dependency)
+    // Upgrade to Web Speech API only if the browser actually has voices (regular browsers)
+    this._ttsEngine = 'google';
+    if (window.speechSynthesis) {
+      const tryWebSpeech = (n = 0) => {
         const voices = window.speechSynthesis.getVoices();
-        this._ttsVoice =
-          voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
-          voices.find(v => /en[-_]GB/i.test(v.lang) && /daniel|george|male/i.test(v.name)) ||
-          voices.find(v => /en[-_]/i.test(v.lang) && !/female|zira|susan|karen|victoria/i.test(v.name)) ||
-          voices.find(v => /en/i.test(v.lang)) ||
-          null;
+        if (voices.length > 0) {
+          this._ttsEngine = 'webspeech';
+          this._ttsVoice =
+            voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
+            voices.find(v => /en[-_]GB/i.test(v.lang) && /daniel|george|male/i.test(v.name)) ||
+            voices.find(v => /en[-_]/i.test(v.lang) && !/female|zira|susan|karen|victoria/i.test(v.name)) ||
+            voices.find(v => /en/i.test(v.lang)) ||
+            null;
+          return;
+        }
+        if (n < 10) setTimeout(() => tryWebSpeech(n + 1), 300);
+        // else stay on 'google'
       };
-      window.speechSynthesis.addEventListener('voiceschanged', pick);
-      pick();
-    };
-    rvCheck();
+      window.speechSynthesis.addEventListener('voiceschanged', () => tryWebSpeech());
+      tryWebSpeech();
+    }
+  }
+
+  _ttsCancel() {
+    if (this._ttsCurrentAudio) {
+      this._ttsCurrentAudio.pause();
+      this._ttsCurrentAudio.src = '';
+      this._ttsCurrentAudio = null;
+    }
+    window.speechSynthesis?.cancel?.();
   }
 
   _speak(text) {
     if (this._ttsPriority) return;
-    if (this._ttsEngine === 'responsive' && window.responsiveVoice) {
-      window.responsiveVoice.cancel();
-      window.responsiveVoice.speak(text, 'UK English Male', { rate: 1.1, pitch: 1.1, volume: 1 });
-      return;
-    }
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.15; u.pitch = 1.1; u.volume = 1.0;
-    if (this._ttsVoice) u.voice = this._ttsVoice;
-    window.speechSynthesis.speak(u);
+    this._ttsCancel();
+    this._ttsPlay(text);
   }
 
   _speakPriority(text) {
-    if (this._ttsEngine === 'responsive' && window.responsiveVoice) {
-      window.responsiveVoice.cancel();
-      this._ttsPriority = true;
-      window.responsiveVoice.speak(text, 'UK English Male', {
-        rate: 1.1, pitch: 1.05, volume: 1,
-        onend:  () => { this._ttsPriority = false; },
-        onerror: () => { this._ttsPriority = false; },
-      });
+    this._ttsCancel();
+    this._ttsPriority = true;
+    this._ttsPlay(text, () => { this._ttsPriority = false; });
+  }
+
+  _ttsPlay(text, onEnd) {
+    if (this._ttsEngine === 'webspeech' && window.speechSynthesis) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 1.15; u.pitch = 1.1; u.volume = 1.0;
+      if (this._ttsVoice) u.voice = this._ttsVoice;
+      if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
+      window.speechSynthesis.speak(u);
       return;
     }
-    if (!window.speechSynthesis) return;
-    window.speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text);
-    u.rate = 1.1; u.pitch = 1.05; u.volume = 1.0;
-    if (this._ttsVoice) u.voice = this._ttsVoice;
-    this._ttsPriority = true;
-    u.onend  = () => { this._ttsPriority = false; };
-    u.onerror = () => { this._ttsPriority = false; };
-    window.speechSynthesis.speak(u);
+    // Google Translate TTS — Audio element loads cross-origin media without CORS restrictions
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(text)}&tl=en-us&client=tw-ob`;
+    const audio = new Audio(url);
+    this._ttsCurrentAudio = audio;
+    audio.volume = 1.0;
+    if (onEnd) { audio.onended = onEnd; audio.onerror = () => onEnd(); }
+    audio.play().catch(() => onEnd?.());
   }
 
   setRemaining(current, total) {
