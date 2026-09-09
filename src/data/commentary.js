@@ -2,57 +2,69 @@ export const COMMENTARY = {
   RACE_START: [
     'AND WE ARE OFF!',
     'THE CHAOS HAS BEGUN!',
-    'TWELVE NATIONS ENTER — ONE WILL SURVIVE!',
+    'FIFTY NATIONS ENTER — ONLY ONE WILL SURVIVE!',
     'LET THE MADNESS BEGIN!',
-    "IT'S ANYONE'S RACE!"
+    "IT'S ANYONE'S RACE!",
+    'THE STARTING GUN HAS FIRED — HOLD ON TIGHT!',
+    'HERE WE GO — WORLD CHAOS RACING IS LIVE!'
   ],
-  DANGER: [
-    '{country} IS HEADING STRAIGHT FOR THE HOLE!',
-    '{country} IS IN SERIOUS TROUBLE!',
-    'WATCH OUT {country}!',
-    '{country} ON THE EDGE — THIS COULD BE IT!',
-    'DANGER! {country} IS BARELY HOLDING ON!'
-  ],
-  COLLISION: [
-    'BIG COLLISION!',
-    'THEY CRASH INTO EACH OTHER!',
-    'MASSIVE IMPACT!',
-    'BODIES FLYING EVERYWHERE!',
-    '{country} TAKES A HIT!'
-  ],
-  BOUNCED: [
-    '{country} GETS LAUNCHED!',
-    'WHAT A BOUNCE FOR {country}!',
-    '{country} IS AIRBORNE!',
-    'THE PAD SENDS {country} FLYING!'
-  ],
+
   ELIMINATED: [
     'OH NO! {country} IS OUT!',
-    "{country} COULDN'T SURVIVE!",
-    'DOWN GOES {country}!',
-    '{country} HAS BEEN ELIMINATED!',
-    'AND THAT IS THE END FOR {country}!'
+    '{country} HAS BEEN ELIMINATED! THE CROWD IS STUNNED!',
+    'GOODBYE {country}! YOU PUT UP A GREAT FIGHT!',
+    '{country} CRASHES OUT OF THE RACE!',
+    'DOWN GOES {country}! WHAT A SHAME!',
+    '{country} IS DONE! NO COMEBACK FROM THAT!',
+    'AND JUST LIKE THAT, {country} IS GONE!',
+    '{country} BOWS OUT OF WORLD CHAOS RACING!',
+    'THE JOURNEY ENDS FOR {country}!',
+    "{country} COULDN'T SURVIVE THE CHAOS!",
+    'SAY GOODBYE TO {country} — THEY ARE OUT!',
+    'ELIMINATED! {country} HAS FALLEN!',
+    '{country} GIVES IT EVERYTHING BUT IT IS NOT ENOUGH!',
+    'WHAT A CRUEL TWIST OF FATE FOR {country}!',
+    '{country} — YOUR RACE IS OVER!',
+    'NO NO NO! {country} IS OUT OF THE RUNNING!',
+    'BRUTAL! {country} IS KNOCKED OUT OF CONTENTION!',
+    'THE CHAOS CLAIMS ANOTHER VICTIM — {country}!',
+    'HEARTBREAK FOR {country} AS THEY ARE ELIMINATED!',
+    "THAT'S ALL FOR {country}! THEY GAVE IT THEIR BEST!",
+    'AND {country} IS HISTORY!',
+    'LIGHTS OUT FOR {country}!',
+    '{country} EXITS IN DRAMATIC FASHION!',
+    'WHAT A WAY TO GO — {country} IS ELIMINATED!',
+    'THE DREAM IS OVER FOR {country}!'
   ],
+
   FINAL_5: [
     'FINAL FIVE! WHO WILL MAKE IT?',
     "ONLY FIVE REMAIN — IT'S GETTING TENSE!",
-    'THE FINAL FIVE ARE FIGHTING FOR SURVIVAL!'
+    'THE FINAL FIVE ARE FIGHTING FOR SURVIVAL!',
+    'FIVE LEFT — EVERY SECOND COUNTS NOW!'
   ],
+
   FINAL_3: [
     'WE ARE DOWN TO THE FINAL THREE!',
     "THREE NATIONS LEFT — THE END IS NEAR!",
-    'FINAL THREE! ANYTHING CAN HAPPEN!'
+    'FINAL THREE! ANYTHING CAN HAPPEN!',
+    'ONLY THREE STANDING — THIS IS INCREDIBLE!'
   ],
+
   FINAL_2: [
     'THIS IS IT! ONLY TWO COUNTRIES REMAIN!',
     'HEAD TO HEAD — THE FINAL SHOWDOWN!',
-    'TWO LEFT! WHO TAKES THE CROWN?'
+    'TWO LEFT! WHO TAKES THE CROWN?',
+    'ONE ON ONE — THE ULTIMATE BATTLE!'
   ],
+
   WINNER: [
     'AND {country} WINS WORLD CHAOS RACING!',
     '{country} IS THE LAST ONE STANDING!',
     'INCREDIBLE! {country} TAKES IT ALL!',
     '{country} WINS! WHAT A RACE!',
-    'THE CHAMPION IS {country}!'
+    'THE CHAMPION IS {country}!',
+    '{country} SURVIVES THE CHAOS AND CLAIMS VICTORY!',
+    'UNBELIEVABLE! {country} IS YOUR WORLD CHAOS RACING CHAMPION!'
   ]
 };
