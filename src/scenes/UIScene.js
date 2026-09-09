@@ -176,6 +176,8 @@ export class UIScene extends Phaser.Scene {
       EventBus.on('CHAOS_EVENT',  ({ label }) => this._showChaosEvent(label)),
       EventBus.on('DARKNESS_ON',  () => this._setDarkness(true)),
       EventBus.on('DARKNESS_OFF', () => this._setDarkness(false)),
+      EventBus.on('RACE_STARTED', () => this._startMidRaceCta()),
+      EventBus.on('INTERMISSION_START', () => this._stopMidRaceCta()),
     ];
   }
 
@@ -184,6 +186,7 @@ export class UIScene extends Phaser.Scene {
     this._unsubs = [];
     this._lbTimer?.remove();
     this._lbTimer = null;
+    this._stopMidRaceCta();
   }
 
   _showCountdown(value) {
@@ -446,6 +449,72 @@ export class UIScene extends Phaser.Scene {
       this.tweens.add({
         targets: all, alpha: 0, duration: 350, ease: 'Power2.in',
         onComplete: () => all.forEach(o => o.destroy()),
+      });
+    });
+  }
+
+  _startMidRaceCta() {
+    this._stopMidRaceCta();
+    this._midRaceTimer = this.time.addEvent({
+      delay: 60000, repeat: -1,
+      callback: () => this._flashMidRaceCta(),
+    });
+  }
+
+  _stopMidRaceCta() {
+    this._midRaceTimer?.remove();
+    this._midRaceTimer = null;
+  }
+
+  _flashMidRaceCta() {
+    if (this._midRaceCtaActive) return;
+    this._midRaceCtaActive = true;
+
+    const cx   = CANVAS_W / 2;
+    const banH = 150;
+    const banY = ZONE_GAME_Y + ZONE_GAME_H - banH;
+    const D    = 155;
+
+    // Semi-transparent background — game remains visible through it
+    const bg = this.add.graphics().setDepth(D).setAlpha(0);
+    bg.fillStyle(0x000000, 0.62);
+    bg.fillRect(0, banY, CANVAS_W, banH);
+    bg.fillStyle(0xff0000, 1);
+    bg.fillRect(0, banY, CANVAS_W, 6);       // top red stripe
+    bg.fillRect(0, banY + banH - 6, CANVAS_W, 6); // bottom red stripe
+
+    // Three items in one row
+    const defs = [
+      { text: '👍  LIKE',      color: '#ffd700' },
+      { text: '↗️  SHARE',     color: '#88ff88' },
+      { text: '🔔  SUBSCRIBE', color: '#ff5555' },
+    ];
+    const colW = CANVAS_W / 3;
+    const txtObjs = defs.map((d, i) =>
+      this.add.text(colW * i + colW / 2, banY + banH / 2, d.text, {
+        fontSize: '64px', fontFamily: 'Arial Black, sans-serif',
+        color: d.color, stroke: '#000000', strokeThickness: 7,
+      }).setOrigin(0.5, 0.5).setDepth(D + 1).setAlpha(0)
+    );
+
+    const all = [bg, ...txtObjs];
+
+    // Fade in
+    this.tweens.add({ targets: all, alpha: 1, duration: 280 });
+
+    // Stagger scale-punch on text items
+    txtObjs.forEach((obj, i) => {
+      obj.setScale(1.25);
+      this.time.delayedCall(i * 130, () =>
+        this.tweens.add({ targets: obj, scaleX: 1, scaleY: 1, duration: 320, ease: 'Back.out(2)' })
+      );
+    });
+
+    // Fade out after 3 s
+    this.time.delayedCall(3000, () => {
+      this.tweens.add({
+        targets: all, alpha: 0, duration: 300, ease: 'Power2.in',
+        onComplete: () => { all.forEach(o => o.destroy()); this._midRaceCtaActive = false; },
       });
     });
   }
