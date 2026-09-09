@@ -12,6 +12,7 @@ export class UIScene extends Phaser.Scene {
     this._drawLeaderboardZone();
     this._drawCommentaryZone();
     this._unsubs = this._setupEventListeners();
+    this._initTTS();
     this.scores = new ScoreManager();
     this._countriesMap = Object.fromEntries(COUNTRIES.map(c => [c.id, c]));
     this.updateLeaderboard();
@@ -260,6 +261,35 @@ export class UIScene extends Phaser.Scene {
 
   setCommentary(text) {
     if (this.commentaryText) this.commentaryText.setText(`"${text}"`);
+    this._speak(text);
+  }
+
+  _initTTS() {
+    this._ttsVoice = null;
+    if (!window.speechSynthesis) return;
+    const pick = () => {
+      const voices = window.speechSynthesis.getVoices();
+      // Prefer an energetic English voice — try male names common in Chrome/Edge
+      this._ttsVoice =
+        voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
+        voices.find(v => /en[-_]GB/i.test(v.lang) && /daniel|george|male/i.test(v.name)) ||
+        voices.find(v => /en[-_]/i.test(v.lang) && !/female|zira|susan|karen|victoria/i.test(v.name)) ||
+        voices.find(v => /en/i.test(v.lang)) ||
+        null;
+    };
+    window.speechSynthesis.addEventListener('voiceschanged', pick);
+    pick();
+  }
+
+  _speak(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u    = new SpeechSynthesisUtterance(text);
+    u.rate     = 1.15;  // slightly fast — sports commentary feel
+    u.pitch    = 1.1;
+    u.volume   = 1.0;
+    if (this._ttsVoice) u.voice = this._ttsVoice;
+    window.speechSynthesis.speak(u);
   }
 
   setRemaining(current, total) {
