@@ -17,20 +17,7 @@ export class AudioManager {
       EventBus.on('COUNTRY_BOUNCED',    () => this._beep(660, 0.08)),
       EventBus.on('COUNTRY_ELIMINATED', () => this._beep(220, 0.25, 'sawtooth')),
       EventBus.on('WINNER_CELEBRATED',  () => this._fanfare()),
-      EventBus.on('PLAY_TTS_BUFFER',    d  => this._playBuffer(d)),
     ];
-  }
-
-  async _playBuffer({ buf, id }) {
-    if (!this._ctx) return;
-    try {
-      const decoded = await this._ctx.decodeAudioData(buf);
-      const src     = this._ctx.createBufferSource();
-      src.buffer    = decoded;
-      src.connect(this._ctx.destination);
-      src.onended   = () => EventBus.emit('TTS_DONE', id);
-      src.start();
-    } catch { EventBus.emit('TTS_DONE', id); }
   }
 
   stop() {

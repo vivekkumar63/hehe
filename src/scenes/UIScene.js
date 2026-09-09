@@ -266,77 +266,21 @@ export class UIScene extends Phaser.Scene {
     this._speak(text);
   }
 
-  async _initTTS() {
-    this._ttsSeq    = 0;
-    this._ttsEngine = 'none';
-    this._ttsDoneSub = null;
-
-    try {
-      const [{ default: meSpeak }, configMod, voiceMod] = await Promise.all([
-        import('mespeak'),
-        import('mespeak/src/mespeak_config.json'),
-        import('mespeak/voices/en/en-us.json'),
-      ]);
-      meSpeak.loadConfig(configMod.default ?? configMod);
-      meSpeak.loadVoice(voiceMod.default ?? voiceMod);
-      this._meSpeak   = meSpeak;
-      this._ttsEngine = 'mespeak';
-    } catch {
-      // Web Speech API fallback (works in regular browsers, not OBS)
-      if (window.speechSynthesis) {
-        this._ttsEngine = 'webspeech';
-        const pick = () => {
-          const voices = window.speechSynthesis.getVoices();
-          if (!voices.length) return;
-          this._ttsVoice =
-            voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
-            voices.find(v => /en/i.test(v.lang)) || null;
-        };
-        window.speechSynthesis.addEventListener('voiceschanged', pick);
-        pick();
-      }
-    }
+  _initTTS() {
+    // TTS is handled by tts-server.js (Windows SAPI via PowerShell).
+    // The game must be served from http://localhost:9876/ for /speak to resolve.
   }
 
   _speak(text) {
     if (this._ttsPriority) return;
-    this._ttsEmit(text);
+    fetch('/speak?t=' + encodeURIComponent(text)).catch(() => {});
   }
 
   _speakPriority(text) {
     this._ttsPriority = true;
-    this._ttsEmit(text, () => { this._ttsPriority = false; });
-  }
-
-  _ttsEmit(text, onEnd) {
-    // meSpeak generates WAV bytes → AudioManager plays via its proven AudioContext
-    if (this._ttsEngine === 'mespeak' && this._meSpeak) {
-      try {
-        const buf = this._meSpeak.speak(text, { rawdata: 'buffer', speed: 165, pitch: 52 });
-        if (buf) {
-          const id = ++this._ttsSeq;
-          if (onEnd) {
-            this._ttsDoneSub?.();
-            this._ttsDoneSub = EventBus.on('TTS_DONE', doneId => {
-              if (doneId !== id) return;
-              this._ttsDoneSub?.(); this._ttsDoneSub = null;
-              onEnd();
-            });
-          }
-          EventBus.emit('PLAY_TTS_BUFFER', { buf: buf.slice(0), id });
-          return;
-        }
-      } catch {}
-    }
-
-    // Web Speech API (regular browsers only)
-    if (window.speechSynthesis) {
-      const u = new SpeechSynthesisUtterance(text);
-      u.rate = 1.15; u.pitch = 1.1; u.volume = 1.0;
-      if (this._ttsVoice) u.voice = this._ttsVoice;
-      if (onEnd) { u.onend = onEnd; u.onerror = onEnd; }
-      window.speechSynthesis.speak(u);
-    }
+    fetch('/speak?t=' + encodeURIComponent(text)).catch(() => {});
+    // Release lock after estimated speech duration (~400 ms per word, min 3 s)
+    setTimeout(() => { this._ttsPriority = false; }, Math.max(3000, text.split(' ').length * 400));
   }
 
   setRemaining(current, total) {
