@@ -332,74 +332,70 @@ export class UIScene extends Phaser.Scene {
 
   _showYTCallToAction() {
     const cx = CANVAS_W / 2;
+    const cy = CANVAS_H / 2;
     const D  = 160;
 
-    // Slide up from below the bottom of the game zone — classic YT lower-thirds style
-    const panelW = CANVAS_W;
-    const panelH = 380;
-    const panelY = ZONE_GAME_Y + ZONE_GAME_H - panelH; // anchored to bottom of game zone
+    // ── Background panel ─────────────────────────────────────────────────────
+    const panelW = 980, panelH = 580;
+    const px = cx - panelW / 2, py = cy - panelH / 2;
 
-    // ── Background ───────────────────────────────────────────────────────────
-    const bg = this.add.graphics().setDepth(D);
-    bg.fillStyle(0x000000, 0.93);
-    bg.fillRect(0, panelY, panelW, panelH);
-    bg.lineStyle(6, 0xff0000, 1);
-    bg.strokeRect(0, panelY, panelW, panelH);
-    // top accent stripe
+    const bg = this.add.graphics().setDepth(D).setAlpha(0);
+    bg.fillStyle(0x0a0a0a, 0.96);
+    bg.fillRoundedRect(px, py, panelW, panelH, 28);
     bg.fillStyle(0xff0000, 1);
-    bg.fillRect(0, panelY, panelW, 8);
+    bg.fillRoundedRect(px, py, panelW, 10, 4);          // top red stripe
+    bg.fillRoundedRect(px, py + panelH - 10, panelW, 10, 4); // bottom red stripe
+    bg.lineStyle(5, 0xff0000, 0.9);
+    bg.strokeRoundedRect(px, py, panelW, panelH, 28);
 
-    // Start off-screen below, slide up
-    bg.y = panelH + 10;
-    this.tweens.add({ targets: bg, y: 0, duration: 350, ease: 'Back.out(1.4)' });
-
-    // ── Header text ──────────────────────────────────────────────────────────
-    const header = this.add.text(cx, panelY + 44, '❤️  SHOW SOME LOVE!  ❤️', {
-      fontSize: '54px', fontFamily: 'Arial Black, sans-serif',
+    // ── Header ────────────────────────────────────────────────────────────────
+    const header = this.add.text(cx, cy - 225, '❤️  SHOW SOME LOVE!  ❤️', {
+      fontSize: '56px', fontFamily: 'Arial Black, sans-serif',
       color: '#ffffff', stroke: '#cc0000', strokeThickness: 5,
-    }).setOrigin(0.5, 0).setDepth(D + 1).setAlpha(0);
+    }).setOrigin(0.5).setDepth(D + 1).setAlpha(0);
 
-    // ── Three CTA items ───────────────────────────────────────────────────────
+    // ── Four CTA rows — each its own line ────────────────────────────────────
     const defs = [
-      { text: '👍  LIKE', color: '#ffdd00' },
-      { text: '🔔  SUBSCRIBE', color: '#ff4444' },
-      { text: '💬  COMMENT', color: '#44ddff' },
+      { text: '👍  LIKE',       color: '#ffd700' },
+      { text: '💬  COMMENT',    color: '#44ddff' },
+      { text: '↗️  SHARE',      color: '#88ff88' },
+      { text: '🔔  SUBSCRIBE',  color: '#ff4444' },
     ];
-    const itemW = Math.floor(panelW / 3);
-    const itemObjs = defs.map((d, i) =>
-      this.add.text(itemW * i + itemW / 2, panelY + 190, d.text, {
-        fontSize: '72px', fontFamily: 'Arial Black, sans-serif',
+    const rowObjs = defs.map((d, i) =>
+      this.add.text(cx, cy - 100 + i * 100, d.text, {
+        fontSize: '76px', fontFamily: 'Arial Black, sans-serif',
         color: d.color, stroke: '#000000', strokeThickness: 8,
-      }).setOrigin(0.5, 0.5).setDepth(D + 1).setAlpha(0)
+      }).setOrigin(0.5).setDepth(D + 1).setAlpha(0)
     );
 
-    // ── Entrance: fade in header, then stagger each item ─────────────────────
-    this.time.delayedCall(200, () =>
-      this.tweens.add({ targets: header, alpha: 1, duration: 250 })
+    // ── Entrances ────────────────────────────────────────────────────────────
+    this.tweens.add({ targets: bg, alpha: 1, duration: 280 });
+
+    this.time.delayedCall(180, () =>
+      this.tweens.add({ targets: header, alpha: 1, duration: 280 })
     );
 
-    itemObjs.forEach((obj, i) => {
-      this.time.delayedCall(350 + i * 180, () => {
-        obj.setScale(1.35);
+    rowObjs.forEach((obj, i) => {
+      this.time.delayedCall(350 + i * 200, () => {
+        obj.setScale(1.3);
         this.tweens.add({
           targets: obj, alpha: 1, scaleX: 1, scaleY: 1,
-          duration: 380, ease: 'Back.out(2)',
+          duration: 380, ease: 'Back.out(2.2)',
         });
       });
     });
 
-    // ── Pulse all items once ──────────────────────────────────────────────────
-    this.time.delayedCall(1500, () => {
+    // ── Pulse once after all rows are in ─────────────────────────────────────
+    this.time.delayedCall(2000, () => {
       this.tweens.add({
-        targets: itemObjs,
-        scaleX: 1.1, scaleY: 1.1,
-        duration: 120, yoyo: true, ease: 'Sine.inOut',
+        targets: rowObjs, scaleX: 1.08, scaleY: 1.08,
+        duration: 130, yoyo: true, ease: 'Sine.inOut',
       });
     });
 
-    // ── Exit: slide back down ─────────────────────────────────────────────────
-    const all = [bg, header, ...itemObjs];
-    this.time.delayedCall(3400, () => {
+    // ── Exit at 4.8s (countdown begins at 5.2s) ──────────────────────────────
+    const all = [bg, header, ...rowObjs];
+    this.time.delayedCall(4800, () => {
       this.tweens.add({
         targets: all, alpha: 0, duration: 350, ease: 'Power2.in',
         onComplete: () => all.forEach(o => o.destroy()),

@@ -31,7 +31,7 @@ export class RaceManager {
     this.state = STATES.PREP;
     this.raceNumber = this.scores.getRaceNumber();
     EventBus.emit('RACE_PREP', { raceNumber: this.raceNumber });
-    this.scene.time.delayedCall(800, () => this._beginCountdown());
+    this.scene.time.delayedCall(5200, () => this._beginCountdown());
   }
 
   _beginCountdown() {
