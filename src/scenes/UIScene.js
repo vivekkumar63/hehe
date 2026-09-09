@@ -265,41 +265,66 @@ export class UIScene extends Phaser.Scene {
   }
 
   _initTTS() {
-    this._ttsVoice = null;
-    if (!window.speechSynthesis) return;
-    const pick = () => {
-      const voices = window.speechSynthesis.getVoices();
-      // Prefer an energetic English voice — try male names common in Chrome/Edge
-      this._ttsVoice =
-        voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
-        voices.find(v => /en[-_]GB/i.test(v.lang) && /daniel|george|male/i.test(v.name)) ||
-        voices.find(v => /en[-_]/i.test(v.lang) && !/female|zira|susan|karen|victoria/i.test(v.name)) ||
-        voices.find(v => /en/i.test(v.lang)) ||
-        null;
+    this._ttsVoice  = null;
+    this._ttsEngine = null;
+
+    // ResponsiveVoice works in OBS/CEF; prefer it when loaded
+    if (window.responsiveVoice) {
+      this._ttsEngine = 'responsive';
+      return;
+    }
+    // Wait up to 3s for ResponsiveVoice to load (async CDN), then fall back
+    const rvCheck = (attempts = 0) => {
+      if (window.responsiveVoice) { this._ttsEngine = 'responsive'; return; }
+      if (attempts < 15) { setTimeout(() => rvCheck(attempts + 1), 200); return; }
+      // No ResponsiveVoice — fall back to Web Speech API
+      if (!window.speechSynthesis) return;
+      this._ttsEngine = 'webspeech';
+      const pick = () => {
+        const voices = window.speechSynthesis.getVoices();
+        this._ttsVoice =
+          voices.find(v => /en[-_]US/i.test(v.lang) && /david|mark|guy|male/i.test(v.name)) ||
+          voices.find(v => /en[-_]GB/i.test(v.lang) && /daniel|george|male/i.test(v.name)) ||
+          voices.find(v => /en[-_]/i.test(v.lang) && !/female|zira|susan|karen|victoria/i.test(v.name)) ||
+          voices.find(v => /en/i.test(v.lang)) ||
+          null;
+      };
+      window.speechSynthesis.addEventListener('voiceschanged', pick);
+      pick();
     };
-    window.speechSynthesis.addEventListener('voiceschanged', pick);
-    pick();
+    rvCheck();
   }
 
   _speak(text) {
+    if (this._ttsPriority) return;
+    if (this._ttsEngine === 'responsive' && window.responsiveVoice) {
+      window.responsiveVoice.cancel();
+      window.responsiveVoice.speak(text, 'UK English Male', { rate: 1.1, pitch: 1.1, volume: 1 });
+      return;
+    }
     if (!window.speechSynthesis) return;
-    if (this._ttsPriority) return; // CTA phrase is speaking — don't interrupt
     window.speechSynthesis.cancel();
-    const u    = new SpeechSynthesisUtterance(text);
-    u.rate     = 1.15;
-    u.pitch    = 1.1;
-    u.volume   = 1.0;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.15; u.pitch = 1.1; u.volume = 1.0;
     if (this._ttsVoice) u.voice = this._ttsVoice;
     window.speechSynthesis.speak(u);
   }
 
   _speakPriority(text) {
+    if (this._ttsEngine === 'responsive' && window.responsiveVoice) {
+      window.responsiveVoice.cancel();
+      this._ttsPriority = true;
+      window.responsiveVoice.speak(text, 'UK English Male', {
+        rate: 1.1, pitch: 1.05, volume: 1,
+        onend:  () => { this._ttsPriority = false; },
+        onerror: () => { this._ttsPriority = false; },
+      });
+      return;
+    }
     if (!window.speechSynthesis) return;
     window.speechSynthesis.cancel();
-    const u    = new SpeechSynthesisUtterance(text);
-    u.rate     = 1.1;
-    u.pitch    = 1.05;
-    u.volume   = 1.0;
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 1.1; u.pitch = 1.05; u.volume = 1.0;
     if (this._ttsVoice) u.voice = this._ttsVoice;
     this._ttsPriority = true;
     u.onend  = () => { this._ttsPriority = false; };
