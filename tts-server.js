@@ -1,9 +1,10 @@
-'use strict';
-const http = require('http');
-const fs   = require('fs');
-const path = require('path');
-const cp   = require('child_process');
+import http from 'http';
+import fs   from 'fs';
+import path from 'path';
+import cp   from 'child_process';
+import { fileURLToPath } from 'url';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = 9876;
 const DIST = path.join(__dirname, 'dist');
 
@@ -23,7 +24,6 @@ let busy = false;
 function speak(text) {
   if (busy) return;
   busy = true;
-  // Sanitise for PowerShell single-quoted string
   const safe = text.replace(/'/g, ' ');
   const cmd  = [
     'Add-Type -AssemblyName System.Speech;',
@@ -37,7 +37,6 @@ function speak(text) {
 
 http.createServer((req, res) => {
 
-  // ── TTS endpoint ────────────────────────────────────────────────────────────
   if (req.url.startsWith('/speak')) {
     const text = new URLSearchParams(req.url.slice(req.url.indexOf('?') + 1)).get('t') || '';
     if (text) { process.stdout.write('[TTS] ' + text + '\n'); speak(text); }
@@ -46,15 +45,12 @@ http.createServer((req, res) => {
     return;
   }
 
-  // ── Serve game files from dist/ ─────────────────────────────────────────────
   const urlPath  = req.url.split('?')[0];
   const filePath = path.resolve(DIST, '.' + urlPath);
-
   if (!filePath.startsWith(DIST)) { res.writeHead(403); res.end(); return; }
 
   fs.readFile(filePath, (err, data) => {
     if (err) {
-      // SPA fallback → index.html
       fs.readFile(path.join(DIST, 'index.html'), (_e, d) => {
         if (_e) { res.writeHead(404); res.end('Not found'); return; }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
