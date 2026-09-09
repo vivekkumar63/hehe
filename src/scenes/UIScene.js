@@ -539,6 +539,18 @@ export class UIScene extends Phaser.Scene {
       );
     });
 
+    // Speak a polite reminder
+    const phrases = [
+      "If you are enjoying the show, please like, share, and subscribe!",
+      "Hey, your support means everything — please like, share, and subscribe!",
+      "Enjoying World Chaos Racing? Please hit that like button and subscribe for more!",
+      "Don't forget to like, share, and subscribe if you are having fun!",
+      "We would love your support — please like, share, and subscribe!",
+      "A quick reminder to like, share, and subscribe — it really helps us out!",
+      "If you are loving the chaos, please like, share, and subscribe!",
+    ];
+    this._speak(phrases[Math.floor(Math.random() * phrases.length)]);
+
     // Fade out after 3 s
     this.time.delayedCall(3000, () => {
       this.tweens.add({
