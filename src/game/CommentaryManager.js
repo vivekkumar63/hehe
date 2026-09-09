@@ -1,7 +1,10 @@
 import { EventBus } from '../utils/eventBus.js';
 import { COMMENTARY } from '../data/commentary.js';
+import { COUNTRIES } from '../data/countries.js';
 
-const COOLDOWNS = { HIGH: 3000, MEDIUM: 6000 };
+const COOLDOWNS = { HIGH: 3000, MEDIUM: 6000, COLLISION: 10000 };
+
+const _idMap = Object.fromEntries(COUNTRIES.map(c => [c.id, c]));
 
 const EVENT_PRIORITY = {
   WINNER:     'HIGH',
@@ -10,6 +13,7 @@ const EVENT_PRIORITY = {
   FINAL_3:    'HIGH',
   FINAL_2:    'HIGH',
   RACE_START: 'HIGH',
+  COLLISION:  'COLLISION',
 };
 
 export class CommentaryManager {
@@ -25,7 +29,12 @@ export class CommentaryManager {
       EventBus.on('RACE_STARTED',       () => this._tryEmit('RACE_START', {}, Date.now())),
       EventBus.on('COUNTRY_ELIMINATED', d  => this._tryEmit('ELIMINATED', d, Date.now())),
       EventBus.on('FINAL_N',            d  => this._tryEmit(`FINAL_${d.n}`, d, Date.now())),
-      EventBus.on('WINNER_CELEBRATED',  d  => this._tryEmit('WINNER', d, Date.now()))
+      EventBus.on('WINNER_CELEBRATED',  d  => this._tryEmit('WINNER', d, Date.now())),
+      EventBus.on('COUNTRY_COLLISION',  d  => {
+        const a = _idMap[d.a?.replace('racer_', '')];
+        const b = _idMap[d.b?.replace('racer_', '')];
+        if (a && b) this._tryEmit('COLLISION', { a, b }, Date.now());
+      }),
     ];
   }
 
@@ -44,7 +53,7 @@ export class CommentaryManager {
     if (!templates?.length) return;
 
     const template = templates[Math.floor(Math.random() * templates.length)];
-    const text     = this._format(template, data.country ?? data);
+    const text     = this._format(template, data);
     this._lastTimes[priority] = now;
 
     if (this._onComment) { this._onComment(text); return; }
@@ -52,7 +61,10 @@ export class CommentaryManager {
     this.ui?.setCommentary(text);
   }
 
-  _format(template, country) {
-    return template.replace(/\{country\}/g, country?.name ?? '');
+  _format(template, data) {
+    return template
+      .replace(/\{country\}/g, data?.country?.name ?? data?.name ?? '')
+      .replace(/\{a\}/g, data?.a?.name ?? '')
+      .replace(/\{b\}/g, data?.b?.name ?? '');
   }
 }

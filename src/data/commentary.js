@@ -37,6 +37,17 @@ export const COMMENTARY = {
     'THE DREAM IS OVER FOR {country}!'
   ],
 
+  COLLISION: [
+    '{a} SLAMS STRAIGHT INTO {b}!',
+    'HUGE IMPACT — {a} AND {b} COLLIDE!',
+    '{b} TAKES A BIG HIT FROM {a}!',
+    '{a} AND {b} CRASH INTO EACH OTHER!',
+    'WHAT A COLLISION BETWEEN {a} AND {b}!',
+    '{b} KNOCKED SIDEWAYS BY {a}!',
+    'OH! {a} AND {b} GO HEAD TO HEAD!',
+    'CONTACT! {a} SMASHES INTO {b}!',
+  ],
+
   FINAL_5: [
     'FINAL FIVE! WHO WILL MAKE IT?',
     "ONLY FIVE REMAIN — IT'S GETTING TENSE!",

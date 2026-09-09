@@ -14,7 +14,6 @@ export class AudioManager {
 
     this._subs = [
       EventBus.on('COUNTDOWN',          d => this._beep(d.value === 'GO!' ? 880 : 440, 0.12)),
-      EventBus.on('COUNTRY_COLLISION',  () => this._noise(0.06)),
       EventBus.on('COUNTRY_BOUNCED',    () => this._beep(660, 0.08)),
       EventBus.on('COUNTRY_ELIMINATED', () => this._beep(220, 0.25, 'sawtooth')),
       EventBus.on('WINNER_CELEBRATED',  () => this._fanfare())
