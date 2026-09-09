@@ -523,12 +523,11 @@ export class GameScene extends Phaser.Scene {
     // ── Meter markers — colour-coded neon bands flash past as you race ─────────
     // colours shift blue → green → yellow → orange → red as finish approaches
     const markerColors = [
-      0x66ff00,  // 1500 m  ← halfway
-      0xffee00,  // 1000 m
+      0xffee00,  // 1000 m  ← halfway
       0xff1111,  // 500 m
     ];
     const trackMeters = TRACK_H / PX_PER_METER;
-    [1500, 1000, 500].forEach((ml, idx) => {
+    [1000, 500].forEach((ml, idx) => {
       const worldY = y0 + (trackMeters - ml) * PX_PER_METER;
       const c      = markerColors[idx];
       const hex    = '#' + c.toString(16).padStart(6, '0');

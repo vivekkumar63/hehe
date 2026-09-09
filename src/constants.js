@@ -16,5 +16,5 @@ export const ZONE_BOTTOM_PAD = CANVAS_H - ZONE_HEADER_H - ZONE_BOARD_H - ZONE_GA
 export const RACER_RADIUS = 44;
 export const GRAVITY_Y    = 2.5;
 
-export const TRACK_H      = 36000;  // total race distance in pixels  (2000 m)
+export const TRACK_H      = 27000;  // total race distance in pixels  (1500 m)
 export const PX_PER_METER = 18;     // 18 px = 1 m  →  terminal ~40 m/s at frictionAir 0.21
