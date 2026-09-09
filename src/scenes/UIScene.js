@@ -283,12 +283,27 @@ export class UIScene extends Phaser.Scene {
 
   _speak(text) {
     if (!window.speechSynthesis) return;
+    if (this._ttsPriority) return; // CTA phrase is speaking — don't interrupt
     window.speechSynthesis.cancel();
     const u    = new SpeechSynthesisUtterance(text);
-    u.rate     = 1.15;  // slightly fast — sports commentary feel
+    u.rate     = 1.15;
     u.pitch    = 1.1;
     u.volume   = 1.0;
     if (this._ttsVoice) u.voice = this._ttsVoice;
+    window.speechSynthesis.speak(u);
+  }
+
+  _speakPriority(text) {
+    if (!window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    const u    = new SpeechSynthesisUtterance(text);
+    u.rate     = 1.1;
+    u.pitch    = 1.05;
+    u.volume   = 1.0;
+    if (this._ttsVoice) u.voice = this._ttsVoice;
+    this._ttsPriority = true;
+    u.onend  = () => { this._ttsPriority = false; };
+    u.onerror = () => { this._ttsPriority = false; };
     window.speechSynthesis.speak(u);
   }
 
@@ -549,7 +564,7 @@ export class UIScene extends Phaser.Scene {
       "A quick reminder to like, share, and subscribe — it really helps us out!",
       "If you are loving the chaos, please like, share, and subscribe!",
     ];
-    this._speak(phrases[Math.floor(Math.random() * phrases.length)]);
+    this._speakPriority(phrases[Math.floor(Math.random() * phrases.length)]);
 
     // Fade out after 3 s
     this.time.delayedCall(3000, () => {
