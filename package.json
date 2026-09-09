@@ -9,8 +9,7 @@
   },
   "dependencies": {
     "mespeak": "^2.0.2",
-    "phaser": "^3.80.0",
-    "ws": "^8.21.3"
+    "phaser": "^3.80.0"
   },
   "devDependencies": {
     "vite": "^5.4.0",
